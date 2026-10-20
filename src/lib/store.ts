@@ -9,7 +9,7 @@ export type Device = {
 };
 export type Request = {
   id: string; tracking: string; owner: string; profile: string; need: string;
-  deviceId?: string; status: "recue" | "validee" | "expediee" | "livree"; createdAt: string; notifications: boolean;
+  deviceId?: string | undefined; status: "recue" | "validee" | "expediee" | "livree"; createdAt: string; notifications: boolean;
 };
 export type User = { name: string; role: Role };
 

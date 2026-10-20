@@ -10,33 +10,128 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CatalogueRouteImport } from './routes/catalogue'
+import { Route as ConnexionRouteImport } from './routes/connexion'
+import { Route as DemandeRouteImport } from './routes/demande'
+import { Route as DonRouteImport } from './routes/don'
+import { Route as EligibiliteRouteImport } from './routes/eligibilite'
+import { Route as ProjetRouteImport } from './routes/projet'
+import { Route as SuiviRouteImport } from './routes/suivi'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CatalogueRoute = CatalogueRouteImport.update({
+  id: '/catalogue',
+  path: '/catalogue',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConnexionRoute = ConnexionRouteImport.update({
+  id: '/connexion',
+  path: '/connexion',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemandeRoute = DemandeRouteImport.update({
+  id: '/demande',
+  path: '/demande',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DonRoute = DonRouteImport.update({
+  id: '/don',
+  path: '/don',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EligibiliteRoute = EligibiliteRouteImport.update({
+  id: '/eligibilite',
+  path: '/eligibilite',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjetRoute = ProjetRouteImport.update({
+  id: '/projet',
+  path: '/projet',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SuiviRoute = SuiviRouteImport.update({
+  id: '/suivi',
+  path: '/suivi',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/catalogue': typeof CatalogueRoute
+  '/connexion': typeof ConnexionRoute
+  '/demande': typeof DemandeRoute
+  '/don': typeof DonRoute
+  '/eligibilite': typeof EligibiliteRoute
+  '/projet': typeof ProjetRoute
+  '/suivi': typeof SuiviRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/catalogue': typeof CatalogueRoute
+  '/connexion': typeof ConnexionRoute
+  '/demande': typeof DemandeRoute
+  '/don': typeof DonRoute
+  '/eligibilite': typeof EligibiliteRoute
+  '/projet': typeof ProjetRoute
+  '/suivi': typeof SuiviRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/catalogue': typeof CatalogueRoute
+  '/connexion': typeof ConnexionRoute
+  '/demande': typeof DemandeRoute
+  '/don': typeof DonRoute
+  '/eligibilite': typeof EligibiliteRoute
+  '/projet': typeof ProjetRoute
+  '/suivi': typeof SuiviRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/catalogue'
+    | '/connexion'
+    | '/demande'
+    | '/don'
+    | '/eligibilite'
+    | '/projet'
+    | '/suivi'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/catalogue'
+    | '/connexion'
+    | '/demande'
+    | '/don'
+    | '/eligibilite'
+    | '/projet'
+    | '/suivi'
+  id:
+    | '__root__'
+    | '/'
+    | '/catalogue'
+    | '/connexion'
+    | '/demande'
+    | '/don'
+    | '/eligibilite'
+    | '/projet'
+    | '/suivi'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CatalogueRoute: typeof CatalogueRoute
+  ConnexionRoute: typeof ConnexionRoute
+  DemandeRoute: typeof DemandeRoute
+  DonRoute: typeof DonRoute
+  EligibiliteRoute: typeof EligibiliteRoute
+  ProjetRoute: typeof ProjetRoute
+  SuiviRoute: typeof SuiviRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +143,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/catalogue': {
+      id: '/catalogue'
+      path: '/catalogue'
+      fullPath: '/catalogue'
+      preLoaderRoute: typeof CatalogueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/connexion': {
+      id: '/connexion'
+      path: '/connexion'
+      fullPath: '/connexion'
+      preLoaderRoute: typeof ConnexionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demande': {
+      id: '/demande'
+      path: '/demande'
+      fullPath: '/demande'
+      preLoaderRoute: typeof DemandeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/don': {
+      id: '/don'
+      path: '/don'
+      fullPath: '/don'
+      preLoaderRoute: typeof DonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/eligibilite': {
+      id: '/eligibilite'
+      path: '/eligibilite'
+      fullPath: '/eligibilite'
+      preLoaderRoute: typeof EligibiliteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projet': {
+      id: '/projet'
+      path: '/projet'
+      fullPath: '/projet'
+      preLoaderRoute: typeof ProjetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/suivi': {
+      id: '/suivi'
+      path: '/suivi'
+      fullPath: '/suivi'
+      preLoaderRoute: typeof SuiviRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CatalogueRoute: CatalogueRoute,
+  ConnexionRoute: ConnexionRoute,
+  DemandeRoute: DemandeRoute,
+  DonRoute: DonRoute,
+  EligibiliteRoute: EligibiliteRoute,
+  ProjetRoute: ProjetRoute,
+  SuiviRoute: SuiviRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

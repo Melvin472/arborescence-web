@@ -1,8 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { FieldLabel, Page, RequiredLegend } from "@/components/Layout";
+import { supabase } from "@/integrations/supabase/client";
 import { PROFILES, type Profile } from "@/lib/referentiel";
-import { hashPassword, isValidEmail, today, useDB, type Account, type Role } from "@/lib/store";
+import { isValidEmail, reload, type Role } from "@/lib/store";
 
 export const Route = createFileRoute("/connexion")({
   head: () => ({ meta: [{ title: "Se connecter — Reboot Solidaire" }, { name: "description", content: "Accédez à votre espace donateur, bénéficiaire ou gestionnaire." }, { property: "og:title", content: "Se connecter" }, { property: "og:description", content: "Accédez à votre espace Reboot Solidaire." }] }),
@@ -12,7 +13,7 @@ export const Route = createFileRoute("/connexion")({
 const roles: [Role, string, string][] = [
   ["donateur", "Donateur", "Particulier, entreprise ou organisme"],
   ["beneficiaire", "Bénéficiaire", "École, association ou particulier"],
-  ["admin", "Gestionnaire", "Équipe Reboot Solidaire"],
+  ["admin", "Gestionnaire", "Équipe Reboot Solidaire (un seul compte possible)"],
 ];
 
 const home = (r: Role) => (r === "admin" ? "/catalogue" : r === "donateur" ? "/don" : "/demande");
@@ -38,83 +39,71 @@ function ErrorMsg({ msg }: { msg: string | null }) {
 }
 
 function LoginForm() {
-  const { db, update } = useDB();
   const nav = useNavigate();
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   return (
     <form className="card-soft p-8 space-y-5" onSubmit={async (e) => {
       e.preventDefault();
-      const acc = db.accounts.find((a) => a.email === email.trim().toLowerCase());
-      if (!acc || acc.passwordHash !== (await hashPassword(pw))) return setErr("E-mail ou mot de passe incorrect.");
-      if (!acc.verified) return setErr("Cette adresse e-mail n'a pas encore été vérifiée.");
-      update((d) => { d.user = { email: acc.email, name: acc.name, role: acc.role, profile: acc.profile }; });
-      nav({ to: home(acc.role) });
+      setBusy(true);
+      const { error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password: pw });
+      if (error) {
+        setBusy(false);
+        return setErr(/confirm/i.test(error.message) ? "Cette adresse e-mail n'a pas encore été vérifiée. Cliquez sur le lien reçu par e-mail." : "E-mail ou mot de passe incorrect.");
+      }
+      const d = await reload();
+      setBusy(false);
+      nav({ to: home(d.user?.role ?? "donateur") });
     }}>
       <RequiredLegend />
       <label className="block"><FieldLabel required>E-mail</FieldLabel><input required type="email" autoComplete="email" className="field mt-1" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="vous@exemple.fr" /></label>
       <label className="block"><FieldLabel required>Mot de passe</FieldLabel><input required type="password" autoComplete="current-password" className="field mt-1" value={pw} onChange={(e) => setPw(e.target.value)} /></label>
       <ErrorMsg msg={err} />
-      <button className="btn btn-primary w-full">Se connecter</button>
-      <p className="text-xs text-muted-foreground">
-        Comptes de démonstration (mot de passe <code>demo1234</code>) : donateur@demo.fr, particulier@demo.fr, ecole@demo.fr, admin@demo.fr
-      </p>
+      <button className="btn btn-primary w-full" disabled={busy}>{busy ? "Connexion…" : "Se connecter"}</button>
     </form>
   );
 }
 
-type Pending = Omit<Account, "passwordHash" | "verified" | "createdAt"> & { password: string; code: string };
-const newCode = () => String(Math.floor(100000 + Math.random() * 900000));
-
 function SignupForm() {
-  const { db, update } = useDB();
-  const nav = useNavigate();
   const [f, setF] = useState({ email: "", name: "", password: "", confirm: "", role: "donateur" as Role, profile: "" as Profile | "" });
   const [err, setErr] = useState<string | null>(null);
-  const [pending, setPending] = useState<Pending | null>(null);
-  const [typed, setTyped] = useState("");
+  const [sent, setSent] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  if (pending)
+  if (sent)
     return (
-      <form className="card-soft p-8 space-y-5" onSubmit={async (e) => {
-        e.preventDefault();
-        if (typed.trim() !== pending.code) return setErr("Code incorrect. Vérifiez l'e-mail reçu ou renvoyez un code.");
-        const acc: Account = {
-          email: pending.email, name: pending.name, role: pending.role, profile: pending.profile,
-          verified: true, passwordHash: await hashPassword(pending.password), createdAt: today(),
-        };
-        update((d) => { d.accounts.push(acc); d.user = { email: acc.email, name: acc.name, role: acc.role, profile: acc.profile }; });
-        nav({ to: home(acc.role) });
-      }}>
+      <div className="card-soft p-8 space-y-4">
         <h2 className="text-2xl font-bold text-primary">Vérifiez votre adresse e-mail</h2>
-        <p>Un code à 6 chiffres a été envoyé à <b>{pending.email}</b>. Saisissez-le pour activer votre compte.</p>
-        <p className="rounded-lg bg-secondary p-3 text-sm">
-          Prototype : aucun e-mail n'est réellement envoyé. Votre code est <b className="font-mono">{pending.code}</b>.
-        </p>
-        <label className="block"><FieldLabel required>Code de vérification</FieldLabel>
-          <input required inputMode="numeric" autoComplete="one-time-code" pattern="\d{6}" maxLength={6} className="field mt-1 font-mono tracking-[0.5em]" value={typed} onChange={(e) => setTyped(e.target.value.replace(/\D/g, ""))} />
-        </label>
-        <ErrorMsg msg={err} />
-        <button className="btn btn-primary w-full">Activer mon compte</button>
-        <div className="flex justify-between text-sm">
-          <button type="button" className="underline" onClick={() => { setPending({ ...pending, code: newCode() }); setTyped(""); setErr(null); }}>Renvoyer un code</button>
-          <button type="button" className="underline" onClick={() => { setPending(null); setErr(null); }}>Modifier l'adresse</button>
-        </div>
-      </form>
+        <p>Un lien de confirmation a été envoyé à <b>{sent}</b>. Cliquez dessus pour activer votre compte, puis connectez-vous.</p>
+        <p className="text-sm text-muted-foreground">Pensez à regarder dans vos courriers indésirables.</p>
+      </div>
     );
 
   return (
-    <form className="card-soft p-8 space-y-5" onSubmit={(e) => {
+    <form className="card-soft p-8 space-y-5" onSubmit={async (e) => {
       e.preventDefault();
       const email = f.email.trim().toLowerCase();
       if (!isValidEmail(email)) return setErr("Adresse e-mail invalide.");
-      if (db.accounts.some((a) => a.email === email)) return setErr("Un compte existe déjà avec cette adresse.");
       if (f.password.length < 8) return setErr("Le mot de passe doit contenir au moins 8 caractères.");
       if (f.password !== f.confirm) return setErr("Les mots de passe ne correspondent pas.");
       if (f.role === "beneficiaire" && !f.profile) return setErr("Précisez si vous êtes un particulier, une association ou une école.");
-      setErr(null);
-      setPending({ email, name: f.name.trim(), role: f.role, profile: f.role === "beneficiaire" ? (f.profile as Profile) : undefined, password: f.password, code: newCode() });
+      setErr(null); setBusy(true);
+      const { error } = await supabase.auth.signUp({
+        email, password: f.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/connexion`,
+          data: { name: f.name.trim(), role: f.role, profile: f.role === "beneficiaire" ? f.profile : null },
+        },
+      });
+      setBusy(false);
+      if (error) {
+        if (/already/i.test(error.message)) return setErr("Un compte existe déjà avec cette adresse.");
+        if (f.role === "admin" && /database/i.test(error.message)) return setErr("Un compte gestionnaire existe déjà. Contactez l'équipe.");
+        return setErr(`Inscription impossible : ${error.message}`);
+      }
+      setSent(email);
     }}>
       <RequiredLegend />
       <fieldset><legend className="mb-2"><FieldLabel required>Je suis</FieldLabel></legend>
@@ -140,7 +129,7 @@ function SignupForm() {
         <label className="block"><FieldLabel required>Confirmation</FieldLabel><input required type="password" autoComplete="new-password" className="field mt-1" value={f.confirm} onChange={(e) => setF({ ...f, confirm: e.target.value })} /></label>
       </div>
       <ErrorMsg msg={err} />
-      <button className="btn btn-primary w-full">Créer mon compte</button>
+      <button className="btn btn-primary w-full" disabled={busy}>{busy ? "Envoi…" : "Créer mon compte"}</button>
     </form>
   );
 }

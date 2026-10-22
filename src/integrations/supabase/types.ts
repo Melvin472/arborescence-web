@@ -14,8 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      contact_messages: {
+        Row: {
+          created_at: string
+          email: string
+          handled: boolean
+          id: string
+          message: string
+          subject: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          handled?: boolean
+          id?: string
+          message: string
+          subject: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          handled?: boolean
+          id?: string
+          message?: string
+          subject?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       devices: {
         Row: {
+          comment: string
           age: string
           brand: string
           category: string | null
@@ -37,6 +68,7 @@ export type Database = {
           type: string
         }
         Insert: {
+          comment?: string
           age?: string
           brand: string
           category?: string | null
@@ -58,6 +90,7 @@ export type Database = {
           type: string
         }
         Update: {
+          comment?: string
           age?: string
           brand?: string
           category?: string | null
@@ -77,6 +110,120 @@ export type Database = {
           status?: string
           tracking?: string
           type?: string
+        }
+        Relationships: []
+      }
+      eligibilities: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          decision_message: string
+          documents: Json
+          id: string
+          justif_type: string
+          org_name: string | null
+          org_type: string | null
+          owner: string
+          owner_id: string
+          participants: number | null
+          profile: string
+          project: string
+          siret: string | null
+          siret_verified: boolean
+          status: string
+          valid_until: string | null
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          decision_message?: string
+          documents?: Json
+          id?: string
+          justif_type: string
+          org_name?: string | null
+          org_type?: string | null
+          owner: string
+          owner_id?: string
+          participants?: number | null
+          profile: string
+          project?: string
+          siret?: string | null
+          siret_verified?: boolean
+          status?: string
+          valid_until?: string | null
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          decision_message?: string
+          documents?: Json
+          id?: string
+          justif_type?: string
+          org_name?: string | null
+          org_type?: string | null
+          owner?: string
+          owner_id?: string
+          participants?: number | null
+          profile?: string
+          project?: string
+          siret?: string | null
+          siret_verified?: boolean
+          status?: string
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
+      feedback: {
+        Row: {
+          approved: boolean
+          author: string
+          created_at: string
+          id: string
+          message: string
+          user_id: string
+        }
+        Insert: {
+          approved?: boolean
+          author: string
+          created_at?: string
+          id?: string
+          message: string
+          user_id?: string
+        }
+        Update: {
+          approved?: boolean
+          author?: string
+          created_at?: string
+          id?: string
+          message?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          read: boolean
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          id?: string
+          read?: boolean
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          read?: boolean
+          title?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -106,6 +253,9 @@ export type Database = {
       }
       requests: {
         Row: {
+          refusal_reason: string | null
+          refusal_message: string
+          os_pref: string
           category: string | null
           created_at: string
           details: string
@@ -122,6 +272,9 @@ export type Database = {
           tracking: string
         }
         Insert: {
+          refusal_reason?: string | null
+          refusal_message?: string
+          os_pref?: string
           category?: string | null
           created_at?: string
           details?: string
@@ -138,6 +291,9 @@ export type Database = {
           tracking: string
         }
         Update: {
+          refusal_reason?: string | null
+          refusal_message?: string
+          os_pref?: string
           category?: string | null
           created_at?: string
           details?: string
@@ -179,6 +335,9 @@ export type Database = {
     }
     Functions: {
       device_assigned_to_me: { Args: { _device_id: string }; Returns: boolean }
+      is_eligible: { Args: { _uid: string }; Returns: boolean }
+      is_member: { Args: { _uid: string }; Returns: boolean }
+      public_stats: { Args: never; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

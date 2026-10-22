@@ -8,6 +8,13 @@
       "when": 1792657890214,
       "tag": "0000_reboot_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792664151878,
+      "tag": "0001_eligibilite_workflow",
+      "breakpoints": true
     }
   ]
 }

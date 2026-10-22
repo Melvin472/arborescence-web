@@ -67,7 +67,7 @@ function Don() {
 
   return (
     <Page title="Faire un don de matériel" intro="Moins de 3 minutes. Aucune information personnelle requise.">
-      <RequireLogin roles={["donateur", "admin"]}>
+      <RequireLogin roles={["utilisateur"]}>
         {done ? (
           <div className="card-soft p-10 max-w-xl text-center">
             <p className="text-success font-bold">Merci pour votre don !</p>
@@ -80,7 +80,7 @@ function Don() {
           <form className="card-soft p-8 max-w-2xl grid gap-5" onSubmit={(e) => {
             e.preventDefault();
             const owner = db.user!.email;
-            const base = { status: "enregistre" as const, createdAt: today(), owner };
+            const base = { status: "enregistre" as const, createdAt: today(), owner, comment: "" };
             const t = code("DON");
             const main: Device = {
               ...base, id: crypto.randomUUID(), tracking: t, type: f.type,

@@ -1,9 +1,9 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { roleLabel, useDB, type Role } from "@/lib/store";
+import { roleLabel, signOut, useDB, type Role } from "@/lib/store";
 
 export function Layout({ children }: { children: ReactNode }) {
-  const { db, update } = useDB();
+  const { db } = useDB();
   const nav = useNavigate();
   const u = db.user;
   const link = "px-3 py-2 rounded-full text-sm font-semibold hover:bg-secondary";
@@ -24,7 +24,7 @@ export function Layout({ children }: { children: ReactNode }) {
             {u?.role === "admin" && <Link to="/catalogue" className={link} activeProps={active}>Catalogue</Link>}
           </nav>
           {u ? (
-            <button className="btn btn-ghost !py-2" onClick={() => { update((d) => { d.user = null; }); nav({ to: "/" }); }}>
+            <button className="btn btn-ghost !py-2" onClick={async () => { await signOut(); nav({ to: "/" }); }}>
               Déconnexion ({u.name} · {u.role === "beneficiaire" && u.profile ? u.profile : roleLabel[u.role]})
             </button>
           ) : (
@@ -55,6 +55,7 @@ export function Page({ title, intro, children }: { title: string; intro?: string
 export function RequireLogin({ children, admin, roles }: { children: ReactNode; admin?: boolean; roles?: Role[] }) {
   const { db } = useDB();
   const allowed: Role[] | undefined = admin ? ["admin"] : roles;
+  if (!db.ready) return <p className="text-muted-foreground">Chargement…</p>;
   if (!db.user)
     return (
       <div className="card-soft p-8 max-w-lg">

@@ -8,3 +8,9 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+# Project rules
+
+- All app data (devices, requests, profiles, roles) lives in Lovable Cloud; `src/lib/store.ts` exposes `useDB()` whose `update(fn)` diffs the in-memory snapshot and writes inserted/changed rows — keeps page code simple while RLS and triggers enforce permissions.
+- Roles live in `public.user_roles` (set by the signup trigger; only the first "admin" signup is accepted) — never trust client-side role claims.
+- Request cancellation side-effects (freeing devices) run in the `guard_request_update` DB trigger, because beneficiaries cannot update devices under RLS.

@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { useDB } from "@/lib/store";
+import { roleLabel, useDB, type Role } from "@/lib/store";
 
 export function Layout({ children }: { children: ReactNode }) {
   const { db, update } = useDB();
@@ -18,14 +18,14 @@ export function Layout({ children }: { children: ReactNode }) {
           <nav className="flex flex-wrap gap-1" aria-label="Navigation principale">
             <Link to="/projet" className={link} activeProps={active}>Le projet</Link>
             <Link to="/eligibilite" className={link} activeProps={active}>Éligibilité</Link>
-            {u && <Link to="/don" className={link} activeProps={active}>Faire un don</Link>}
-            {u && <Link to="/demande" className={link} activeProps={active}>Demander</Link>}
+            {u && u.role !== "beneficiaire" && <Link to="/don" className={link} activeProps={active}>Faire un don</Link>}
+            {u?.role === "beneficiaire" && <Link to="/demande" className={link} activeProps={active}>Demander</Link>}
             {u && <Link to="/suivi" className={link} activeProps={active}>Suivi</Link>}
             {u?.role === "admin" && <Link to="/catalogue" className={link} activeProps={active}>Catalogue</Link>}
           </nav>
           {u ? (
             <button className="btn btn-ghost !py-2" onClick={() => { update((d) => { d.user = null; }); nav({ to: "/" }); }}>
-              Déconnexion ({u.name})
+              Déconnexion ({u.name} · {u.role === "beneficiaire" && u.profile ? u.profile : roleLabel[u.role]})
             </button>
           ) : (
             <Link to="/connexion" className="btn btn-primary !py-2">Se connecter</Link>
@@ -52,16 +52,48 @@ export function Page({ title, intro, children }: { title: string; intro?: string
   );
 }
 
-export function RequireLogin({ children, admin }: { children: ReactNode; admin?: boolean }) {
+export function RequireLogin({ children, admin, roles }: { children: ReactNode; admin?: boolean; roles?: Role[] }) {
   const { db } = useDB();
-  if (!db.user || (admin && db.user.role !== "admin"))
+  const allowed: Role[] | undefined = admin ? ["admin"] : roles;
+  if (!db.user)
     return (
       <div className="card-soft p-8 max-w-lg">
-        <p className="font-semibold">{admin ? "Cet espace est réservé au gestionnaire de l'association." : "Connectez-vous pour accéder à cet espace."}</p>
+        <p className="font-semibold">Connectez-vous pour accéder à cet espace.</p>
         <Link to="/connexion" className="btn btn-primary mt-4">Se connecter</Link>
       </div>
     );
+  if (allowed && !allowed.includes(db.user.role))
+    return (
+      <div className="card-soft p-8 max-w-lg">
+        <p className="font-semibold">
+          {admin ? "Cet espace est réservé au gestionnaire de l'association." : `Cet espace est réservé aux comptes : ${allowed.map((r) => roleLabel[r]).join(", ")}.`}
+        </p>
+        <p className="text-sm text-muted-foreground mt-2">Vous êtes connecté en tant que {roleLabel[db.user.role]}.</p>
+      </div>
+    );
   return <>{children}</>;
+}
+
+/** Libellé de champ : astérisque rouge pour les champs obligatoires, mention « facultatif » sinon. */
+export function FieldLabel({ children, required }: { children: ReactNode; required?: boolean }) {
+  return (
+    <span className="font-semibold">
+      {children}
+      {required ? (
+        <span className="text-destructive ml-0.5" aria-hidden="true">*</span>
+      ) : (
+        <span className="ml-1 text-xs font-normal text-muted-foreground">(facultatif)</span>
+      )}
+    </span>
+  );
+}
+
+export function RequiredLegend() {
+  return (
+    <p className="text-sm text-muted-foreground">
+      Les champs marqués d'un <span className="text-destructive font-bold">*</span> sont obligatoires.
+    </p>
+  );
 }
 
 export function Badge({ children, tone = "muted" }: { children: ReactNode; tone?: "muted" | "success" | "warning" | "accent" }) {

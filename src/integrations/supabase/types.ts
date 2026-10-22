@@ -115,6 +115,8 @@ export type Database = {
       }
       eligibilities: {
         Row: {
+          documents_deleted_at: string | null
+          siret_details: Json | null
           created_at: string
           decided_at: string | null
           decision_message: string
@@ -134,6 +136,8 @@ export type Database = {
           valid_until: string | null
         }
         Insert: {
+          documents_deleted_at?: string | null
+          siret_details?: Json | null
           created_at?: string
           decided_at?: string | null
           decision_message?: string
@@ -153,6 +157,8 @@ export type Database = {
           valid_until?: string | null
         }
         Update: {
+          documents_deleted_at?: string | null
+          siret_details?: Json | null
           created_at?: string
           decided_at?: string | null
           decision_message?: string
@@ -175,6 +181,7 @@ export type Database = {
       }
       feedback: {
         Row: {
+          rating: number
           approved: boolean
           author: string
           created_at: string
@@ -183,6 +190,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          rating?: number
           approved?: boolean
           author: string
           created_at?: string
@@ -191,6 +199,7 @@ export type Database = {
           user_id?: string
         }
         Update: {
+          rating?: number
           approved?: boolean
           author?: string
           created_at?: string
@@ -253,6 +262,10 @@ export type Database = {
       }
       requests: {
         Row: {
+          closed_at: string | null
+          delivered_at: string | null
+          shipped_at: string | null
+          approved_at: string | null
           refusal_reason: string | null
           refusal_message: string
           os_pref: string
@@ -272,6 +285,10 @@ export type Database = {
           tracking: string
         }
         Insert: {
+          closed_at?: string | null
+          delivered_at?: string | null
+          shipped_at?: string | null
+          approved_at?: string | null
           refusal_reason?: string | null
           refusal_message?: string
           os_pref?: string
@@ -291,6 +308,10 @@ export type Database = {
           tracking: string
         }
         Update: {
+          closed_at?: string | null
+          delivered_at?: string | null
+          shipped_at?: string | null
+          approved_at?: string | null
           refusal_reason?: string | null
           refusal_message?: string
           os_pref?: string

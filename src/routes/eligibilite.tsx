@@ -4,7 +4,7 @@ import { Badge, ErrorMsg, FieldLabel, Page, RequiredLegend, RequireLogin } from 
 import { JUSTIFS, ORG_TYPES, PARTICULIER_JUSTIFS } from "@/lib/referentiel";
 import {
   activeEligibility, eligibilityLabel, eligibilityTone, fmtDate, isValidSiret, lookupSiret, myEligibilities, pendingEligibility,
-  submitEligibility, useDB,
+  submitEligibility, useDB, type SiretDetails,
 } from "@/lib/store";
 
 export const Route = createFileRoute("/eligibilite")({
@@ -50,7 +50,7 @@ function Eligibilite() {
 
       <div className="card-soft p-8 mt-8">
         <h2 className="text-xl font-bold">Vos données restent confidentielles</h2>
-        <p className="mt-2 text-muted-foreground">Vos justificatifs ne sont vus que par le gestionnaire de l'association, jamais par les donateurs. À la fin de la période d'éligibilité, il suffit de refaire une demande.</p>
+        <p className="mt-2 text-muted-foreground">Vos justificatifs ne sont vus que par le gestionnaire de l'association, jamais par les donateurs, et ils sont <b>supprimés dès que votre dossier est traité</b> : seule la décision est conservée. Nous ne demandons que des attestations, jamais le détail de vos revenus. À la fin de la période d'éligibilité, il suffit de refaire une demande.</p>
       </div>
 
       <section id="test" className="mt-12 scroll-mt-24" aria-labelledby="test-title">
@@ -128,7 +128,7 @@ function Consent({ checked, onChange }: { checked: boolean; onChange: (v: boolea
   return (
     <label className="flex gap-2 items-start text-sm">
       <input required type="checkbox" className="mt-1" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-      <span>J'accepte que mes justificatifs soient consultés par le gestionnaire de Reboot Solidaire pour vérifier mon éligibilité. Ils ne sont jamais transmis aux donateurs.<span className="text-destructive" aria-hidden="true">*</span></span>
+      <span>J'accepte que mes justificatifs soient consultés par le gestionnaire de Reboot Solidaire pour vérifier mon éligibilité. Ils ne sont jamais transmis aux donateurs et sont supprimés dès que la décision est prise.<span className="text-destructive" aria-hidden="true">*</span></span>
     </label>
   );
 }
@@ -186,7 +186,7 @@ function OrganisationForm({ onSent }: { onSent: (months: number) => void }) {
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [check, setCheck] = useState<{ state: "idle" | "checking" | "ok" | "ko" | "unknown"; msg?: string }>({ state: "idle" });
+  const [check, setCheck] = useState<{ state: "idle" | "checking" | "ok" | "ko" | "unknown"; msg?: string; details?: SiretDetails }>({ state: "idle" });
   const siret = f.siret.replace(/\s/g, "");
 
   const verify = async (): Promise<boolean | null> => {
@@ -195,8 +195,9 @@ function OrganisationForm({ onSent }: { onSent: (months: number) => void }) {
     const r = await lookupSiret(siret);
     if (!r) { setCheck({ state: "unknown", msg: "Vérification automatique indisponible : le gestionnaire contrôlera le numéro." }); return null; }
     if (!r.found) { setCheck({ state: "ko", msg: "Ce SIRET est introuvable dans l'annuaire des entreprises." }); return false; }
-    if (!r.active) { setCheck({ state: "ko", msg: `${r.name} : cet établissement est fermé.` }); return false; }
-    setCheck({ state: "ok", msg: `Établissement trouvé : ${r.name}` });
+    const { found: _found, ...details } = r;
+    if (!details.active) { setCheck({ state: "ko", msg: `${details.name} : cet établissement est fermé.`, details }); return false; }
+    setCheck({ state: "ok", msg: `Établissement trouvé : ${details.name}${details.commune ? ` (${details.commune})` : ""}`, details });
     return true;
   };
 
@@ -211,7 +212,7 @@ function OrganisationForm({ onSent }: { onSent: (months: number) => void }) {
       if (verified === false) return setErr("Le numéro SIRET n'a pas pu être validé.");
       setBusy(true);
       const ok = await submitEligibility(db, {
-        justifType: "organisation", orgType: f.orgType, orgName: f.orgName.trim(), siret, siretVerified: verified === true,
+        justifType: "organisation", orgType: f.orgType, orgName: f.orgName.trim(), siret, siretVerified: verified === true, siretDetails: check.details,
         project: f.project.trim(), participants,
       }, [doc]);
       setBusy(false);
@@ -240,6 +241,11 @@ function OrganisationForm({ onSent }: { onSent: (months: number) => void }) {
           </div>
         </label>
         {check.msg && <p role="status" className={`text-sm mt-1 ${check.state === "ok" ? "text-success font-semibold" : check.state === "ko" ? "text-destructive font-semibold" : "text-muted-foreground"}`}>{check.state === "ok" ? "✓ " : ""}{check.msg}</p>}
+        {check.state === "ok" && check.details && (
+          <p className="text-xs text-muted-foreground mt-1">
+            Source : annuaire officiel des entreprises (État).{check.details.isAssociation ? ` Association${check.details.rna ? ` · RNA ${check.details.rna}` : ""}.` : ""}{check.details.creationDate ? ` Créée le ${fmtDate(check.details.creationDate)}.` : ""}
+          </p>
+        )}
       </div>
       <FileField label="Justificatif" required file={doc} onFile={setDoc} hint={JUSTIFS.organisation.doc} />
       <label><FieldLabel required>Description du projet</FieldLabel>

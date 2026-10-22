@@ -92,14 +92,16 @@ export const MAX_QUANTITY: Record<Profile, number> = { Particulier: 1, Organisat
  * Justificatifs acceptés et durée d'éligibilité proposée par défaut (en mois).
  * Le gestionnaire peut ajuster la durée au moment de la validation.
  */
-export const JUSTIFS: Record<string, { label: string; doc: string; months: number; profile: Profile }> = {
+export const JUSTIFS: Record<string, { label: string; doc: string; months: number; profile: Profile; legacy?: boolean }> = {
   bourse: { label: "Étudiant boursier", doc: "Notification de bourse (CROUS) de l'année en cours", months: 12, profile: "Particulier" },
   france_travail: { label: "Demandeur d'emploi", doc: "Attestation d'inscription à France Travail de moins de 3 mois", months: 6, profile: "Particulier" },
   caf: { label: "Bénéficiaire des minima sociaux (RSA, AAH, prime d'activité…)", doc: "Attestation CAF ou MSA de moins de 3 mois", months: 12, profile: "Particulier" },
-  impots: { label: "Revenus modestes", doc: "Dernier avis d'imposition (revenu fiscal de référence)", months: 12, profile: "Particulier" },
+  c2s: { label: "Revenus modestes (Complémentaire santé solidaire)", doc: "Attestation de droits à la Complémentaire santé solidaire (C2S) en cours de validité", months: 12, profile: "Particulier" },
+  // Ancien critère, remplacé par la C2S (trop de données personnelles) : conservé pour afficher les anciens dossiers.
+  impots: { label: "Revenus modestes (avis d'imposition)", doc: "Avis d'imposition", months: 12, profile: "Particulier", legacy: true },
   organisation: { label: "Organisation", doc: "Statuts, récépissé de déclaration ou attestation d'immatriculation", months: 24, profile: "Organisation" },
 };
-export const PARTICULIER_JUSTIFS = Object.entries(JUSTIFS).filter(([, j]) => j.profile === "Particulier");
+export const PARTICULIER_JUSTIFS = Object.entries(JUSTIFS).filter(([, j]) => j.profile === "Particulier" && !j.legacy);
 export const VALIDITY_OPTIONS = [3, 6, 12, 18, 24, 36];
 
 export const REFUSAL_REASONS = [
@@ -115,11 +117,28 @@ export const CONTACT_SUBJECTS = ["Question sur un don", "Question sur une demand
 /** Questions fréquentes, affichées dans le pied de page (et balisées pour le référencement). */
 export const FAQ: [string, string][] = [
   ["Qui peut recevoir un ordinateur reconditionné ?", "Les particuliers en situation de précarité (étudiants boursiers, demandeurs d'emploi, bénéficiaires des minima sociaux, foyers aux revenus modestes) et les organisations qui accompagnent des publics éloignés du numérique : associations, écoles, structures de l'ESS."],
-  ["Comment prouver mon éligibilité ?", "Créez un compte, puis remplissez le formulaire d'éligibilité avec un justificatif (attestation CAF, France Travail, bourse, avis d'imposition ou, pour une organisation, numéro SIRET et statuts). Un gestionnaire valide votre dossier pour une durée limitée."],
-  ["Combien de temps mon éligibilité est-elle valable ?", "Elle dépend du justificatif : 6 mois pour une attestation France Travail, 12 mois pour une bourse, une attestation CAF ou un avis d'imposition, 24 mois pour une organisation. À l'échéance, il suffit de refaire une demande d'éligibilité."],
+  ["Comment prouver mon éligibilité ?", "Créez un compte, puis remplissez le formulaire d'éligibilité avec un justificatif (attestation CAF, France Travail, bourse, Complémentaire santé solidaire ou, pour une organisation, numéro SIRET et statuts). Un gestionnaire valide votre dossier pour une durée limitée, puis vos justificatifs sont supprimés."],
+  ["Combien de temps mon éligibilité est-elle valable ?", "Elle dépend du justificatif : 6 mois pour une attestation France Travail, 12 mois pour une bourse, une attestation CAF ou une attestation de Complémentaire santé solidaire, 24 mois pour une organisation. À l'échéance, il suffit de refaire une demande d'éligibilité."],
   ["Quel matériel puis-je donner ?", "Ordinateurs portables, tours et périphériques (écrans, claviers, souris, imprimantes…), même anciens ou en panne : nous les diagnostiquons et les réparons quand c'est possible."],
   ["Mes données sont-elles effacées avant redistribution ?", "Oui. Chaque appareil est entièrement formaté et un système d'exploitation propre (Linux ou Windows) est réinstallé avant d'être confié à un bénéficiaire."],
   ["Est-ce que je peux choisir mon système d'exploitation ?", "Oui, vous indiquez votre préférence (Linux, Windows ou pas de préférence) lors de votre demande."],
+  ["Que deviennent mes justificatifs ?", "Ils ne sont consultés que par le gestionnaire de l'association et sont supprimés dès que votre dossier d'éligibilité est traité. Seule la décision (validée ou refusée, et sa date de fin) est conservée."],
   ["Donateurs et bénéficiaires se connaissent-ils ?", "Non. L'anonymat est strict dans les deux sens : seul le gestionnaire de l'association voit les informations nécessaires au traitement."],
   ["Le service est-il payant ?", "Non, le matériel est remis gratuitement aux bénéficiaires éligibles."],
 ];
+
+/**
+ * Page Trustpilot de l'association (ex. "https://fr.trustpilot.com/review/votre-site.fr").
+ * Laisser vide tant que l'association n'a pas de compte Trustpilot : le lien n'est alors pas affiché.
+ */
+export const TRUSTPILOT_URL = "";
+
+/** Les sections de gestion sont accessibles depuis le menu de l'en-tête (paramètre ?onglet=). */
+export const ADMIN_TABS = [
+  ["demandes", "Demandes", "Approuver, attribuer le matériel, expédier et suivre les demandes."],
+  ["eligibilites", "Éligibilités", "Examiner les dossiers et fixer leur durée de validité."],
+  ["materiel", "Matériel", "Réceptionner, diagnostiquer et mettre en ligne les dons."],
+  ["messages", "Messages", "Répondre aux messages envoyés depuis la page contact."],
+  ["avis", "Avis", "Publier ou retirer les avis affichés sur la page d'accueil."],
+] as const;
+export type AdminTab = (typeof ADMIN_TABS)[number][0];

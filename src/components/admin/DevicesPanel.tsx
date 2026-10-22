@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Badge } from "@/components/Layout";
+import { StatusFilter } from "@/components/Status";
 import { DISK_OPTIONS, OS_OPTIONS, RAM_OPTIONS } from "@/lib/referentiel";
 import { deviceTone, statusLabel, STATUSES, useDB, type Device, type Status } from "@/lib/store";
 
@@ -14,15 +15,11 @@ export function DevicesPanel() {
 
   return (
     <>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-        {STATUSES.map((s) => (
-          <button key={s} onClick={() => setFs(fs === s ? "all" : s)} className={`card-soft p-5 text-left ${fs === s ? "ring-4 ring-primary" : ""}`}>
-            <div className="font-display text-3xl font-bold">{db.devices.filter((d) => d.status === s).length}</div>
-            <div className="mt-1"><Badge tone={deviceTone[s]}>{statusLabel.admin[s]}</Badge></div>
-          </button>
-        ))}
+      <div className="mb-4">
+        <StatusFilter<Status> label="Filtrer le matériel par statut" value={fs} onChange={setFs} total={db.devices.length}
+          items={STATUSES.map((s) => ({ key: s, label: statusLabel.admin[s], tone: deviceTone[s], count: db.devices.filter((d) => d.status === s).length }))} />
       </div>
-      <label className="block max-w-xs mb-4"><span className="sr-only">Filtrer par marque</span>
+      <label className="block max-w-xs mb-6"><span className="sr-only">Filtrer par marque</span>
         <select className="field" value={fb} onChange={(e) => setFb(e.target.value)}>
           <option value="">Toutes les marques</option>
           {brands.map((b) => <option key={b}>{b}</option>)}

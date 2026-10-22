@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Badge, Page, RequireLogin, ToneLegend, toneBg } from "@/components/Layout";
+import { Badge, Page, RequireLogin, toneBg } from "@/components/Layout";
+import { RequestTimeline, StatusFilter } from "@/components/Status";
 import {
-  cancelRequest, deviceLabel, deviceTone, fmtDate, requestLabel, requestTone, statusLabel, STATUSES, useDB,
-  type Device, type Request,
+  cancelRequest, deviceLabel, deviceTone, fmtDate, requestLabel, requestTone, statusLabel, STATUSES, TONE_LABEL, TONE_ORDER, useDB,
+  type Device, type Request, type Tone,
 } from "@/lib/store";
 
 export const Route = createFileRoute("/suivi")({
@@ -22,34 +23,41 @@ function Suivi() {
 function SuiviContent() {
   const { db } = useDB();
   const [q, setQ] = useState("");
+  const [tone, setTone] = useState<Tone | "all">("all");
   const u = db.user!;
   const norm = q.trim().toUpperCase();
   const has = (...vals: (string | undefined)[]) => vals.some((v) => v && v.toUpperCase().includes(norm));
   const myReqs = db.requests.filter((r) => r.owner === u.email);
   const myDons = db.devices.filter((d) => d.owner === u.email);
-  const reqs = (norm ? myReqs.filter((r) => has(r.tracking, r.deviceType, r.category, r.need)) : myReqs).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  const dons = (norm ? myDons.filter((d) => has(d.tracking, d.brand, d.ref, d.type, d.category)) : myDons).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const searchedReqs = norm ? myReqs.filter((r) => has(r.tracking, r.deviceType, r.category, r.need)) : myReqs;
+  const searchedDons = norm ? myDons.filter((d) => has(d.tracking, d.brand, d.ref, d.type, d.category)) : myDons;
+  // Les statuts sous la barre de recherche servent de filtre (même couleur = même signification).
+  const reqs = searchedReqs.filter((r) => tone === "all" || requestTone[r.status] === tone).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const dons = searchedDons.filter((d) => tone === "all" || deviceTone[d.status] === tone).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const countTone = (t: Tone) => searchedReqs.filter((r) => requestTone[r.status] === t).length + searchedDons.filter((d) => deviceTone[d.status] === t).length;
+  const filtering = !!norm || tone !== "all";
 
   return (
     <>
-      {myDons.length > 0 && !norm && <DonorDashboard devices={myDons} />}
+      {myDons.length > 0 && !filtering && <DonorDashboard devices={myDons} />}
 
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <form className="flex flex-wrap items-end gap-2 max-w-xl flex-1" onSubmit={(e) => e.preventDefault()} role="search">
-          <label className="flex-1 min-w-60"><span className="font-semibold">Rechercher</span>
-            <input className="field mt-1" placeholder="N° de suivi (DON-1234, DEM-1234), marque, modèle…" value={q} onChange={(e) => setQ(e.target.value)} />
-          </label>
-          {q && <button type="button" className="btn btn-ghost !py-2" onClick={() => setQ("")}>Effacer</button>}
-        </form>
-        <ToneLegend />
+      <form className="flex flex-wrap items-end gap-2 max-w-xl" onSubmit={(e) => e.preventDefault()} role="search">
+        <label className="flex-1 min-w-60"><span className="font-semibold">Rechercher</span>
+          <input className="field mt-1" placeholder="N° de suivi (DON-1234, DEM-1234), marque, modèle…" value={q} onChange={(e) => setQ(e.target.value)} />
+        </label>
+        {q && <button type="button" className="btn btn-ghost !py-2" onClick={() => setQ("")}>Effacer</button>}
+      </form>
+      <div className="mt-3">
+        <StatusFilter<Tone> label="Filtrer par statut" value={tone} onChange={setTone} total={searchedReqs.length + searchedDons.length}
+          items={TONE_ORDER.map((t) => ({ key: t, label: TONE_LABEL[t], tone: t, count: countTone(t) })).filter((it) => it.count > 0 || it.key === tone)} />
       </div>
-      {norm && <p className="text-sm text-muted-foreground mt-2">{reqs.length + dons.length} résultat(s) pour « {q.trim()} ».</p>}
+      {filtering && <p className="text-sm text-muted-foreground mt-2">{reqs.length + dons.length} résultat(s){norm ? ` pour « ${q.trim()} »` : ""}{tone !== "all" ? ` · ${TONE_LABEL[tone]}` : ""}.</p>}
 
       <h2 className="text-2xl font-bold mt-10 mb-4">Mes demandes de matériel</h2>
       <div className="grid gap-4">
         {reqs.map((r) => <RequestCard key={r.id} r={r} />)}
         {!reqs.length && (
-          <p className="text-muted-foreground">{norm ? "Aucune demande ne correspond à votre recherche." : <>Aucune demande. <Link to="/demande" className="underline">Faire une demande</Link></>}</p>
+          <p className="text-muted-foreground">{filtering ? "Aucune demande ne correspond à votre recherche." : <>Aucune demande. <Link to="/demande" className="underline">Faire une demande</Link></>}</p>
         )}
       </div>
 
@@ -62,27 +70,15 @@ function SuiviContent() {
           </div>
         ))}
         {!dons.length && (
-          <p className="text-muted-foreground">{norm ? "Aucun don ne correspond à votre recherche." : <>Aucun don. <Link to="/don" className="underline">Faire un don</Link></>}</p>
+          <p className="text-muted-foreground">{filtering ? "Aucun don ne correspond à votre recherche." : <>Aucun don. <Link to="/don" className="underline">Faire un don</Link></>}</p>
         )}
       </div>
     </>
   );
 }
 
-const STEPS = [
-  ["recue", "Reçue"], ["validee", "Approuvée"], ["attribuee", "Matériel attribué"], ["expediee", "Expédiée"], ["livree", "Livrée"],
-] as const;
-
-function stepIndex(r: Request) {
-  if (r.status === "livree") return 4;
-  if (r.status === "expediee") return 3;
-  if (r.status === "validee") return r.deviceIds.length >= r.quantity ? 2 : 1;
-  return 0;
-}
-
 function RequestCard({ r }: { r: Request }) {
   const { db, update } = useDB();
-  const i = stepIndex(r);
   const assigned = r.deviceIds.map((id) => db.devices.find((d) => d.id === id)).filter((d): d is Device => !!d);
   const canCancel = r.status === "recue" || r.status === "validee";
   const closed = r.status === "annulee" || r.status === "refusee";
@@ -104,25 +100,14 @@ function RequestCard({ r }: { r: Request }) {
         {r.details && <div className="sm:col-span-2"><dt className="inline font-semibold">Précisions : </dt><dd className="inline">{r.details}</dd></div>}
       </dl>
 
-      {r.status === "refusee" ? (
+      <RequestTimeline r={r} />
+      {r.status === "refusee" && (
         <div className="mt-4 rounded-xl bg-destructive/10 p-4 text-sm">
           <p className="font-semibold text-destructive">Demande refusée : {r.refusalReason}</p>
           {r.refusalMessage && <p className="mt-1 whitespace-pre-line">Message du gestionnaire : {r.refusalMessage}</p>}
           <p className="mt-2 text-muted-foreground">Une question ? <Link to="/contact" className="underline">Contactez-nous</Link>.</p>
         </div>
-      ) : r.status === "annulee" ? (
-        <p className="mt-4 text-sm text-muted-foreground">Vous avez annulé cette demande.</p>
-      ) : (
-        <ol className="grid grid-cols-5 gap-2 mt-4" aria-label="Avancement de la demande">
-          {STEPS.map(([k, l], n) => (
-            <li key={k} aria-current={n === i ? "step" : undefined}
-              className={`text-xs font-semibold p-2 rounded-lg text-center ${n < i ? toneBg.success : n === i ? toneBg[requestTone[r.status]] : toneBg.muted}`}>
-              {l}
-            </li>
-          ))}
-        </ol>
       )}
-
       {!closed && (
         <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
           <label className="flex gap-2 items-center text-sm"><input type="checkbox" checked={r.notifications} onChange={(e) => update((d) => { const x = d.requests.find((y) => y.id === r.id); if (x) x.notifications = e.target.checked; })} /> Recevoir les mises à jour par e-mail</label>

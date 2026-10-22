@@ -32,6 +32,8 @@ export type Request = {
   deviceType: string; category?: string | undefined; quantity: number; need: string; details: string; osPref: string;
   deviceIds: string[]; status: RequestStatus; createdAt: string; notifications: boolean;
   refusalReason?: string | undefined; refusalMessage: string;
+  /** Date de chaque étape, écrite par la base. */
+  approvedAt?: string | undefined; shippedAt?: string | undefined; deliveredAt?: string | undefined; closedAt?: string | undefined;
 };
 
 export type EligibilityStatus = "en_attente" | "validee" | "refusee";
@@ -39,13 +41,15 @@ export type EligibilityDoc = { path: string; name: string; size: number };
 export type Eligibility = {
   id: string; ownerId: string; owner: string; profile: Profile; justifType: string;
   orgType?: string | undefined; orgName?: string | undefined; siret?: string | undefined; siretVerified: boolean;
+  siretDetails?: SiretDetails | undefined; documentsDeletedAt?: string | undefined;
   project: string; participants?: number | undefined; documents: EligibilityDoc[];
   status: EligibilityStatus; validUntil?: string | undefined; decisionMessage: string; decidedAt?: string | undefined; createdAt: string;
 };
 
 export type Notification = { id: string; title: string; body: string; read: boolean; createdAt: string };
 export type ContactMessage = { id: string; email: string; subject: string; message: string; handled: boolean; createdAt: string };
-export type Feedback = { id: string; userId: string; author: string; message: string; approved: boolean; createdAt: string };
+export type Feedback = { id: string; userId: string; author: string; message: string; rating: number; approved: boolean; createdAt: string };
+export type SiretDetails = { name: string; active: boolean; isAssociation: boolean; rna?: string; commune?: string; naf?: string; creationDate?: string };
 
 export type Account = { email: string; name: string; profile?: Profile | undefined };
 export type User = { id: string; email: string; name: string; role: Role; profile?: Profile | undefined };
@@ -86,6 +90,7 @@ const fromRequest = (r: any): Request => ({
   id: r.id, tracking: r.tracking, owner: r.owner, profile: r.profile, deviceType: r.device_type, category: u(r.category),
   quantity: r.quantity, need: r.need, details: r.details, osPref: r.os_pref ?? "Pas de préférence", deviceIds: r.device_ids ?? [], status: r.status,
   createdAt: r.created_at, notifications: r.notifications, refusalReason: u(r.refusal_reason), refusalMessage: r.refusal_message ?? "",
+  approvedAt: u(r.approved_at), shippedAt: u(r.shipped_at), deliveredAt: u(r.delivered_at), closedAt: u(r.closed_at),
 });
 const toRequest = (r: Request) => ({
   id: r.id, tracking: r.tracking, owner: r.owner, profile: r.profile, device_type: r.deviceType, category: r.category ?? null,
@@ -97,6 +102,7 @@ const fromEligibility = (r: any): Eligibility => ({
   id: r.id, ownerId: r.owner_id, owner: r.owner, profile: r.profile, justifType: r.justif_type, orgType: u(r.org_type), orgName: u(r.org_name),
   siret: u(r.siret), siretVerified: r.siret_verified, project: r.project, participants: u(r.participants),
   documents: Array.isArray(r.documents) ? r.documents : [], status: r.status, validUntil: u(r.valid_until),
+  siretDetails: u(r.siret_details), documentsDeletedAt: u(r.documents_deleted_at),
   decisionMessage: r.decision_message, decidedAt: u(r.decided_at), createdAt: r.created_at,
 });
 
@@ -107,7 +113,7 @@ async function loadStats(): Promise<DB["stats"]> {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const fromFeedback = (f: any): Feedback => ({ id: f.id, userId: f.user_id, author: f.author, message: f.message, approved: f.approved, createdAt: f.created_at });
+const fromFeedback = (f: any): Feedback => ({ id: f.id, userId: f.user_id, author: f.author, message: f.message, rating: f.rating ?? 5, approved: f.approved, createdAt: f.created_at });
 
 export async function reload(): Promise<DB> {
   const { data: { user } } = await supabase.auth.getUser();
@@ -240,8 +246,11 @@ export function isValidSiret(s: string): boolean {
   return sum % 10 === 0;
 }
 
-/** Recherche l'établissement dans l'annuaire public des entreprises (API gouvernementale ouverte). */
-export async function lookupSiret(siret: string): Promise<{ found: boolean; name?: string; active?: boolean } | null> {
+/**
+ * Connecteur vers l'annuaire officiel des entreprises de l'État (API ouverte recherche-entreprises.api.gouv.fr) :
+ * vérifie que le SIRET existe, que l'établissement est actif, et s'il s'agit d'une association.
+ */
+export async function lookupSiret(siret: string): Promise<({ found: true } & SiretDetails) | { found: false } | null> {
   try {
     const res = await fetch(`https://recherche-entreprises.api.gouv.fr/search?q=${siret}&page=1&per_page=1`);
     if (!res.ok) return null;
@@ -252,7 +261,16 @@ export async function lookupSiret(siret: string): Promise<{ found: boolean; name
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const etab = [r.siege, ...(r.matching_etablissements ?? [])].find((e: any) => e?.siret === siret);
     if (!etab) return { found: false };
-    return { found: true, name: r.nom_complet as string, active: etab.etat_administratif !== "F" };
+    return {
+      found: true,
+      name: String(r.nom_complet ?? ""),
+      active: etab.etat_administratif !== "F",
+      isAssociation: !!r.complements?.est_association,
+      rna: r.complements?.identifiant_association ?? undefined,
+      commune: etab.libelle_commune ?? undefined,
+      naf: r.activite_principale ?? undefined,
+      creationDate: r.date_creation ?? undefined,
+    };
   } catch {
     return null; // service indisponible : la vérification sera faite par le gestionnaire
   }
@@ -268,7 +286,7 @@ export const pendingEligibility = (db: DB) => myEligibilities(db).find((e) => e.
 
 export async function submitEligibility(
   db: DB,
-  data: Pick<Eligibility, "justifType" | "orgType" | "orgName" | "siret" | "siretVerified" | "project" | "participants">,
+  data: Pick<Eligibility, "justifType" | "orgType" | "orgName" | "siret" | "siretVerified" | "siretDetails" | "project" | "participants">,
   files: File[],
 ): Promise<boolean> {
   const user = db.user!;
@@ -281,16 +299,26 @@ export async function submitEligibility(
   }
   return act(supabase.from("eligibilities").insert({
     owner: user.email, profile: user.profile ?? "Particulier", justif_type: data.justifType,
-    org_type: data.orgType ?? null, org_name: data.orgName ?? null, siret: data.siret ?? null, siret_verified: data.siretVerified,
+    org_type: data.orgType ?? null, org_name: data.orgName ?? null, siret: data.siret ?? null, siret_verified: data.siretVerified, siret_details: (data.siretDetails ?? null) as unknown as Json,
     project: data.project, participants: data.participants ?? null, documents: documents as unknown as Json,
   }));
 }
 
-export function decideEligibility(id: string, decision: { status: "validee"; validUntil: string; message: string } | { status: "refusee"; message: string }) {
-  return act(supabase.from("eligibilities").update({
+/**
+ * Décision du gestionnaire. Pour limiter les données conservées (RGPD), les justificatifs
+ * sont supprimés du stockage dès que la décision est prise ; seule la décision reste.
+ */
+export async function decideEligibility(e: Eligibility, decision: { status: "validee"; validUntil: string; message: string } | { status: "refusee"; message: string }) {
+  const ok = await act(supabase.from("eligibilities").update({
     status: decision.status, valid_until: decision.status === "validee" ? decision.validUntil : null,
     decision_message: decision.message.trim(), decided_at: new Date().toISOString(),
-  }).eq("id", id), decision.status === "validee" ? "Éligibilité validée : le demandeur a été prévenu." : "Refus envoyé au demandeur.");
+    documents_deleted_at: e.documents.length ? new Date().toISOString() : null,
+  }).eq("id", e.id), decision.status === "validee" ? "Éligibilité validée : le demandeur a été prévenu." : "Refus envoyé au demandeur.");
+  if (ok && e.documents.length) {
+    const { error } = await supabase.storage.from("justificatifs").remove(e.documents.map((d) => d.path));
+    if (error) toast.error(`Les justificatifs n'ont pas pu être supprimés : ${error.message}`);
+  }
+  return ok;
 }
 
 export async function openDocument(path: string) {
@@ -307,8 +335,8 @@ export const sendContact = (m: { email: string; subject: string; message: string
   act(supabase.from("contact_messages").insert({ email: m.email.trim().toLowerCase(), subject: m.subject, message: m.message.trim() }));
 export const setContactHandled = (id: string, handled: boolean) => act(supabase.from("contact_messages").update({ handled }).eq("id", id));
 
-export const submitFeedback = (author: string, message: string) =>
-  act(supabase.from("feedback").insert({ author: author.trim(), message: message.trim() }), "Merci ! Votre avis sera publié après relecture.");
+export const submitFeedback = (author: string, message: string, rating: number) =>
+  act(supabase.from("feedback").insert({ author: author.trim(), message: message.trim(), rating }), "Merci ! Votre avis sera publié après relecture.");
 export const moderateFeedback = (id: string, approved: boolean) => act(supabase.from("feedback").update({ approved }).eq("id", id));
 export const deleteFeedback = (id: string) => act(supabase.from("feedback").delete().eq("id", id));
 
@@ -388,6 +416,9 @@ export type Tone = "warning" | "info" | "accent" | "success" | "destructive" | "
 export const deviceTone: Record<Status, Tone> = { enregistre: "warning", diagnostic: "info", disponible: "success", reserve: "info", expedie: "accent", demande: "success" };
 export const requestTone: Record<RequestStatus, Tone> = { recue: "warning", validee: "info", expediee: "accent", livree: "success", annulee: "muted", refusee: "destructive" };
 export const eligibilityTone = (e: Eligibility): Tone => (isExpired(e) ? "muted" : ({ en_attente: "warning", validee: "success", refusee: "destructive" } as const)[e.status]);
+/** Libellé d'une catégorie de statut (même couleur = même signification). */
+export const TONE_LABEL: Record<Tone, string> = { warning: "En attente", info: "En cours", accent: "En route", success: "Terminé · prêt", destructive: "Refusé", muted: "Annulé" };
+export const TONE_ORDER: Tone[] = ["warning", "info", "accent", "success", "destructive", "muted"];
 export const TONE_LEGEND: [Tone, string][] = [["warning", "En attente"], ["info", "En cours"], ["accent", "En route"], ["success", "Terminé / prêt"], ["destructive", "Refusé"], ["muted", "Annulé"]];
 
 export const statusLabel: Record<Role, Record<Status, string>> = {

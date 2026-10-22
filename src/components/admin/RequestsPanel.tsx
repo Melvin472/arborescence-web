@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Badge, toneBg } from "@/components/Layout";
+import { BadgeCheck, CircleX, House, PackageCheck, Truck } from "lucide-react";
+import { Badge } from "@/components/Layout";
+import { RequestTimeline, StatusFilter, type FilterItem } from "@/components/Status";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { REFUSAL_REASONS } from "@/lib/referentiel";
 import {
@@ -7,7 +9,8 @@ import {
   requestTone, shipRequest, unassignDevice, useDB, type Device, type Request, type RequestStatus,
 } from "@/lib/store";
 
-const FILTERS: [RequestStatus | "all", string][] = [["all", "Toutes"], ["recue", "À examiner"], ["validee", "Approuvées"], ["expediee", "Expédiées"], ["livree", "Livrées"], ["refusee", "Refusées"], ["annulee", "Annulées"]];
+/** Une seule barre : chaque statut garde la couleur de la légende du site et sert de filtre. */
+const FILTERS: [RequestStatus, string][] = [["recue", "En attente · reçues"], ["validee", "En cours · approuvées"], ["expediee", "En route · expédiées"], ["livree", "Terminées · livrées"], ["refusee", "Refusées"], ["annulee", "Annulées"]];
 
 export function RequestsPanel() {
   const { db } = useDB();
@@ -18,13 +21,11 @@ export function RequestsPanel() {
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   return (
     <>
-      <div className="flex flex-wrap gap-2 mb-4" role="group" aria-label="Filtrer les demandes">
-        {FILTERS.map(([k, l]) => {
-          const n = k === "all" ? db.requests.length : db.requests.filter((r) => r.status === k).length;
-          return <button key={k} onClick={() => setFilter(k)} className={`btn !py-1.5 text-sm ${filter === k ? "btn-primary" : "btn-ghost"}`}>{l} ({n})</button>;
-        })}
+      <input className="field max-w-md" placeholder="Rechercher un n° de demande ou un e-mail" value={q} onChange={(e) => setQ(e.target.value)} />
+      <div className="mt-3 mb-6">
+        <StatusFilter<RequestStatus> label="Filtrer les demandes par statut" value={filter} onChange={setFilter} total={db.requests.length}
+          items={FILTERS.map(([k, l]): FilterItem<RequestStatus> => ({ key: k, label: l, tone: requestTone[k], count: db.requests.filter((r) => r.status === k).length }))} />
       </div>
-      <input className="field max-w-sm mb-6" placeholder="Rechercher un n° de demande ou un e-mail" value={q} onChange={(e) => setQ(e.target.value)} />
       <div className="grid gap-4">
         {list.map((r) => <RequestCard key={r.id} r={r} />)}
         {!list.length && <p className="text-muted-foreground">Aucune demande.</p>}
@@ -33,8 +34,6 @@ export function RequestsPanel() {
   );
 }
 
-const WORKFLOW = [["recue", "1. Reçue"], ["validee", "2. Approuvée"], ["attribuee", "3. Matériel attribué"], ["expediee", "4. Expédiée"], ["livree", "5. Livrée"]] as const;
-const step = (r: Request) => (r.status === "livree" ? 4 : r.status === "expediee" ? 3 : r.status === "validee" ? (r.deviceIds.length >= r.quantity ? 2 : 1) : 0);
 
 function RequestCard({ r }: { r: Request }) {
   const { db, update } = useDB();
@@ -76,13 +75,7 @@ function RequestCard({ r }: { r: Request }) {
         <p className="text-sm rounded-lg bg-destructive/10 p-3"><b className="text-destructive">Refusée : {r.refusalReason}</b>{r.refusalMessage && <><br />Message envoyé : {r.refusalMessage}</>}</p>
       )}
 
-      {!["annulee", "refusee"].includes(r.status) && (
-        <ol className="grid grid-cols-5 gap-2" aria-label="Étapes de traitement">
-          {WORKFLOW.map(([k, l], n) => (
-            <li key={k} className={`text-xs font-semibold p-2 rounded-lg text-center ${n < step(r) ? toneBg.success : n === step(r) ? toneBg[requestTone[r.status]] : toneBg.muted}`}>{l}</li>
-          ))}
-        </ol>
-      )}
+      <RequestTimeline r={r} />
 
       {(r.status === "validee" || assigned.length > 0) && !["annulee", "refusee"].includes(r.status) && (
         <div className="text-sm">
@@ -103,7 +96,7 @@ function RequestCard({ r }: { r: Request }) {
                 <option value="">{candidates.length ? "Choisir un matériel disponible…" : "Aucun matériel disponible de ce type"}</option>
                 {candidates.map((d) => <option key={d.id} value={d.id}>{d.tracking} — {deviceLabel(d)}{d.ram ? ` · ${d.ram} · ${d.os}` : ""}</option>)}
               </select>
-              <button className="btn btn-primary !py-1.5" disabled={!pick}>Attribuer</button>
+              <button className="btn btn-primary !py-1.5" disabled={!pick}><PackageCheck width={18} height={18} aria-hidden="true" /> Attribuer</button>
             </form>
           )}
         </div>
@@ -111,15 +104,15 @@ function RequestCard({ r }: { r: Request }) {
 
       {!closed && (
         <div className="flex flex-wrap gap-2 items-center">
-          {r.status === "recue" && <button className="btn btn-primary !py-2" onClick={() => run((x) => approveRequest(x, r.id))}>✓ Approuver la demande</button>}
+          {r.status === "recue" && <button className="btn btn-primary !py-2" onClick={() => run((x) => approveRequest(x, r.id))}><BadgeCheck width={20} height={20} aria-hidden="true" /> Approuver la demande</button>}
           {r.status === "validee" && (
             <>
-              <button className="btn btn-primary !py-2 disabled:opacity-50 disabled:cursor-not-allowed" disabled={!complete} onClick={() => run((x) => shipRequest(x, r.id))}>Expédier la commande</button>
+              <button className="btn btn-primary !py-2 disabled:opacity-50 disabled:cursor-not-allowed" disabled={!complete} onClick={() => run((x) => shipRequest(x, r.id))}><Truck width={20} height={20} aria-hidden="true" /> Expédier la commande</button>
               {!complete && <span className="text-xs text-muted-foreground">Attribuez {r.quantity - assigned.length} appareil(s) de plus pour pouvoir expédier.</span>}
             </>
           )}
-          {r.status === "expediee" && <button className="btn btn-primary !py-2" onClick={() => run((x) => deliverRequest(x, r.id))}>Marquer comme livrée</button>}
-          {(r.status === "recue" || r.status === "validee") && <button className="btn btn-ghost !py-2 !border-destructive text-destructive ml-auto" onClick={() => setRefusing(true)}>Refuser la demande</button>}
+          {r.status === "expediee" && <button className="btn btn-primary !py-2" onClick={() => run((x) => deliverRequest(x, r.id))}><House width={20} height={20} aria-hidden="true" /> Marquer comme livrée</button>}
+          {(r.status === "recue" || r.status === "validee") && <button className="btn btn-ghost !py-2 !border-destructive text-destructive ml-auto" onClick={() => setRefusing(true)}><CircleX width={20} height={20} aria-hidden="true" /> Refuser la demande</button>}
         </div>
       )}
       {err && <p role="alert" className="text-sm text-destructive font-semibold">{err}</p>}

@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Layout } from "@/components/Layout";
+import { Layout, Stars } from "@/components/Layout";
+import { TRUSTPILOT_URL } from "@/lib/referentiel";
 import { useDB } from "@/lib/store";
 
 export const Route = createFileRoute("/")({
@@ -18,6 +19,7 @@ function Index() {
   const { db } = useDB();
   const sent = db.stats.pcsSent;
   const published = db.feedback.filter((f) => f.approved);
+  const average = published.length ? published.reduce((a, f) => a + f.rating, 0) / published.length : 0;
   return (
     <Layout>
       <section className="max-w-6xl mx-auto px-4 py-20 grid md:grid-cols-2 gap-12 items-center">
@@ -35,21 +37,17 @@ function Index() {
             <Link to="/eligibilite" hash="test" className="btn btn-ghost">Faire un test d'éligibilité</Link>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          {([["3 min", "pour déclarer un don"], ["100 %", "anonyme entre donateur et bénéficiaire"], ["live", "PC déjà envoyés aux bénéficiaires"], ["0 €", "pour les bénéficiaires éligibles"]] as const).map(([n, l], i) => (
-            <div key={l} className={`card-soft p-6 ${i % 2 ? "mt-8" : ""}`}>
-              {n === "live" ? (
-                <>
-                  <div className="font-display text-4xl font-bold text-accent" aria-live="polite">{sent ?? "…"}</div>
-                  <div className="mt-2 text-sm font-semibold">{l}</div>
-                  <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground"><span className="h-2 w-2 rounded-full bg-success animate-pulse" aria-hidden="true" /> Mis à jour en direct</div>
-                </>
-              ) : (
-                <>
-                  <div className="font-display text-4xl font-bold text-accent">{n}</div>
-                  <div className="mt-2 text-sm font-semibold">{l}</div>
-                </>
+        {/* Quatre cadres identiques : même taille, même structure, alignés sur une grille. */}
+        <div className="grid grid-cols-2 auto-rows-fr gap-4">
+          {([["3 min", "pour déclarer un don"], ["100 %", "anonyme entre donateur et bénéficiaire"], ["live", "PC déjà envoyés aux bénéficiaires"], ["0 €", "pour les bénéficiaires éligibles"]] as const).map(([n, l]) => (
+            <div key={l} className="card-soft p-6 flex flex-col relative">
+              {n === "live" && (
+                <span className="absolute top-4 right-4 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                  <span className="h-2 w-2 rounded-full bg-success animate-pulse" aria-hidden="true" /> En direct
+                </span>
               )}
+              <div className="font-display text-4xl font-bold text-accent" aria-live={n === "live" ? "polite" : undefined}>{n === "live" ? sent ?? "…" : n}</div>
+              <div className="mt-2 text-sm font-semibold">{l}</div>
             </div>
           ))}
         </div>
@@ -63,15 +61,24 @@ function Index() {
       </section>
       <section className="py-14 overflow-hidden" aria-labelledby="avis-title">
         <div className="max-w-6xl mx-auto px-4 flex flex-wrap items-end justify-between gap-4">
-          <h2 id="avis-title" className="text-3xl font-bold text-primary">Ils en parlent</h2>
-          <Link to="/profil" className="text-sm font-semibold underline">Laisser mon avis</Link>
+          <div>
+            <h2 id="avis-title" className="text-3xl font-bold text-primary">Ils en parlent</h2>
+            {published.length > 0 && (
+              <p className="mt-2 flex items-center gap-2 text-sm"><Stars value={average} /> <b>{average.toFixed(1).replace(".", ",")}/5</b> · {published.length} avis</p>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-4 text-sm font-semibold">
+            <Link to="/profil" className="underline">Laisser mon avis</Link>
+            {TRUSTPILOT_URL && <a href={TRUSTPILOT_URL} target="_blank" rel="noopener noreferrer" className="underline">Nos avis sur Trustpilot ↗</a>}
+          </div>
         </div>
         {published.length ? (
           <div className="mt-6 overflow-x-auto motion-safe:overflow-hidden">
             <ul className="marquee-track px-4" style={{ ["--marquee-duration" as string]: `${Math.max(20, published.length * 8)}s` }}>
               {[...published, ...published].map((f, i) => (
                 <li key={`${f.id}-${i}`} aria-hidden={i >= published.length} className="card-soft p-6 w-80 shrink-0">
-                  <p className="text-sm">« {f.message} »</p>
+                  <Stars value={f.rating} />
+                  <p className="text-sm mt-2">« {f.message} »</p>
                   <p className="mt-3 text-sm font-semibold text-accent">— {f.author}</p>
                 </li>
               ))}

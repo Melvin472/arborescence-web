@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Badge, ErrorMsg, FieldLabel, Page, PasswordField, RequireLogin } from "@/components/Layout";
+import { Badge, ErrorMsg, FieldLabel, Page, PasswordField, RequireLogin, StarInput, Stars } from "@/components/Layout";
 import { supabase } from "@/integrations/supabase/client";
 import { JUSTIFS } from "@/lib/referentiel";
 import {
@@ -168,21 +168,27 @@ function FeedbackForm() {
   const mine = db.feedback.filter((f) => f.userId === db.user?.id);
   const [author, setAuthor] = useState((db.user?.name ?? "").split(" ")[0] ?? "");
   const [message, setMessage] = useState("");
+  const [rating, setRating] = useState(0);
+  const [err, setErr] = useState<string | null>(null);
   return (
     <section className="card-soft p-6">
       <h2 className="text-xl font-bold text-primary">Laisser un avis</h2>
       <p className="text-sm text-muted-foreground mt-1">Votre retour peut être publié sur la page d'accueil après relecture par l'équipe.</p>
       <form className="grid gap-3 mt-4" onSubmit={async (e) => {
         e.preventDefault();
-        if (await submitFeedback(author, message)) setMessage("");
+        if (!rating) return setErr("Choisissez une note de 1 à 5 étoiles.");
+        setErr(null);
+        if (await submitFeedback(author, message, rating)) { setMessage(""); setRating(0); }
       }}>
+        <div><FieldLabel required>Votre note</FieldLabel><div className="mt-1"><StarInput value={rating} onChange={setRating} /></div></div>
         <label><FieldLabel required>Nom affiché</FieldLabel><input required maxLength={60} className="field mt-1" placeholder="ex. Camille, ou le nom de votre association" value={author} onChange={(e) => setAuthor(e.target.value)} /></label>
         <label><FieldLabel required>Votre avis</FieldLabel><textarea required minLength={10} maxLength={500} rows={3} className="field mt-1" value={message} onChange={(e) => setMessage(e.target.value)} /></label>
+        <ErrorMsg msg={err} />
         <button className="btn btn-accent !py-2 justify-self-start">Envoyer mon avis</button>
       </form>
       {mine.length > 0 && (
         <ul className="mt-4 grid gap-2 text-sm">
-          {mine.map((f) => <li key={f.id} className="rounded-lg bg-muted p-3"><Badge tone={f.approved ? "success" : "warning"}>{f.approved ? "Publié" : "En relecture"}</Badge> <span className="ml-2">« {f.message} »</span></li>)}
+          {mine.map((f) => <li key={f.id} className="rounded-lg bg-muted p-3"><Badge tone={f.approved ? "success" : "warning"}>{f.approved ? "Publié" : "En relecture"}</Badge> <span className="ml-2 inline-flex align-middle"><Stars value={f.rating} size={14} /></span> <span className="ml-1">« {f.message} »</span></li>)}
         </ul>
       )}
     </section>

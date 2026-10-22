@@ -1,8 +1,9 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
+import { Star } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { FAQ } from "@/lib/referentiel";
+import { ADMIN_TABS, FAQ, type AdminTab } from "@/lib/referentiel";
 import { markNotificationRead, PASSWORD_RULES, roleLabel, signOut, TONE_LEGEND, useDB, type Role, type Tone } from "@/lib/store";
 
 export function Layout({ children }: { children: ReactNode }) {
@@ -13,6 +14,14 @@ export function Layout({ children }: { children: ReactNode }) {
   const link = "px-3 py-2 rounded-full text-sm font-semibold hover:bg-secondary";
   const active = { className: "bg-secondary text-primary" };
   const member = u && u.role !== "admin";
+  // Éléments en attente d'action du gestionnaire, affichés dans le menu.
+  const adminCounts: Record<AdminTab, number> = {
+    demandes: db.requests.filter((r) => r.status === "recue").length,
+    eligibilites: db.eligibilities.filter((e) => e.status === "en_attente").length,
+    materiel: db.devices.filter((d) => d.status === "enregistre").length,
+    messages: db.contacts.filter((m) => !m.handled).length,
+    avis: db.feedback.filter((f) => !f.approved).length,
+  };
   return (
     <div className="min-h-screen flex flex-col">
       <header className="sticky top-0 z-10 bg-background/90 backdrop-blur border-b">
@@ -21,12 +30,19 @@ export function Layout({ children }: { children: ReactNode }) {
             Reboot<span className="text-accent">·</span>Solidaire
           </Link>
           <nav className="flex flex-wrap gap-1" aria-label="Navigation principale">
-            <Link to="/projet" className={link} activeProps={active}>Le projet</Link>
-            <Link to="/eligibilite" className={link} activeProps={active}>Éligibilité</Link>
+            {u?.role !== "admin" && <Link to="/projet" className={link} activeProps={active}>Le projet</Link>}
+            {u?.role !== "admin" && <Link to="/eligibilite" className={link} activeProps={active}>Éligibilité</Link>}
             {member && <Link to="/don" className={link} activeProps={active}>Faire un don</Link>}
             {member && <Link to="/demande" className={link} activeProps={active}>Demander</Link>}
             {member && <Link to="/suivi" className={link} activeProps={active}>Mes dons et demandes</Link>}
-            {u?.role === "admin" && <Link to="/catalogue" className={link} activeProps={active}>Gestion</Link>}
+            {u?.role === "admin" && ADMIN_TABS.map(([k, l]) => {
+              const n = adminCounts[k];
+              return (
+                <Link key={k} to="/catalogue" search={{ onglet: k }} activeOptions={{ includeSearch: true }} className={link} activeProps={active}>
+                  {l}{n > 0 && <span className="ml-1 rounded-full bg-accent text-accent-foreground text-xs px-1.5 py-0.5" aria-label={`${n} à traiter`}>{n}</span>}
+                </Link>
+              );
+            })}
           </nav>
           {u ? (
             <DropdownMenu>
@@ -42,7 +58,7 @@ export function Layout({ children }: { children: ReactNode }) {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={() => nav({ to: "/profil" })}>Mon profil{unread.length ? ` (${unread.length} message${unread.length > 1 ? "s" : ""})` : ""}</DropdownMenuItem>
                 {member && <DropdownMenuItem onSelect={() => nav({ to: "/suivi" })}>Mes dons et demandes</DropdownMenuItem>}
-                {u.role === "admin" && <DropdownMenuItem onSelect={() => nav({ to: "/catalogue" })}>Espace gestionnaire</DropdownMenuItem>}
+                {u.role === "admin" && <DropdownMenuItem onSelect={() => nav({ to: "/catalogue", search: { onglet: "demandes" } })}>Espace gestionnaire</DropdownMenuItem>}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={async () => { await signOut(); nav({ to: "/" }); }}>Se déconnecter</DropdownMenuItem>
               </DropdownMenuContent>
@@ -228,4 +244,36 @@ export function PasswordField({ label, value, onChange, autoComplete, showRules,
 
 export function ErrorMsg({ msg }: { msg: string | null }) {
   return msg ? <p role="alert" className="rounded-lg bg-destructive/10 text-destructive font-semibold p-3 text-sm">{msg}</p> : null;
+}
+
+/** Note sur 5 étoiles (affichage). */
+export function Stars({ value, size = 18 }: { value: number; size?: number }) {
+  const full = Math.round(value);
+  return (
+    <span className="inline-flex gap-0.5" role="img" aria-label={`Note : ${value.toFixed(1).replace(".", ",")} sur 5`}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <Star key={n} width={size} height={size} aria-hidden="true" className={n <= full ? "text-warning fill-current" : "text-muted-foreground/40"} />
+      ))}
+    </span>
+  );
+}
+
+/** Choix d'une note de 1 à 5 étoiles (formulaire). */
+export function StarInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [hover, setHover] = useState(0);
+  const shown = hover || value;
+  const labels = ["Très mauvais", "Mauvais", "Correct", "Bien", "Excellent"];
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex gap-1" role="radiogroup" aria-label="Note" onMouseLeave={() => setHover(0)}>
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button key={n} type="button" role="radio" aria-checked={value === n} aria-label={`${n} étoile${n > 1 ? "s" : ""} — ${labels[n - 1]}`}
+            onMouseEnter={() => setHover(n)} onClick={() => onChange(n)} className="p-0.5 rounded hover:scale-110 transition-transform">
+            <Star width={30} height={30} aria-hidden="true" className={n <= shown ? "text-warning fill-current" : "text-muted-foreground/40"} />
+          </button>
+        ))}
+      </div>
+      <span className="text-sm text-muted-foreground">{shown ? labels[shown - 1] : "Choisissez une note"}</span>
+    </div>
+  );
 }

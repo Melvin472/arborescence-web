@@ -14,22 +14,22 @@ export type Status = "enregistre" | "diagnostic" | "disponible" | "reserve" | "e
 export const STATUSES: Status[] = ["enregistre", "diagnostic", "disponible", "reserve", "expedie", "demande"];
 
 export type Device = {
-  id: string; tracking: string; type: string; category?: string; brand: string; ref: string;
-  age: string; cpu: string; powersOn: boolean; screenOk?: boolean; notes: string;
-  status: Status; ram?: string; disk?: string; os?: string; createdAt: string; owner: string;
+  id: string; tracking: string; type: string; category?: string | undefined; brand: string; ref: string;
+  age: string; cpu: string; powersOn: boolean; screenOk?: boolean | undefined; notes: string;
+  status: Status; ram?: string | undefined; disk?: string | undefined; os?: string | undefined; createdAt: string; owner: string;
   /** Numéro de suivi de la tour avec laquelle cet écran a été donné. */
-  linkedTo?: string;
+  linkedTo?: string | undefined;
 };
 
 export type RequestStatus = "recue" | "validee" | "expediee" | "livree" | "annulee";
 export type Request = {
   id: string; tracking: string; owner: string; profile: Profile;
-  deviceType: string; category?: string; quantity: number; need: string; details: string;
+  deviceType: string; category?: string | undefined; quantity: number; need: string; details: string;
   deviceIds: string[]; status: RequestStatus; createdAt: string; notifications: boolean;
 };
 
 export type Account = { email: string; name: string };
-export type User = { id: string; email: string; name: string; role: Role; profile?: Profile };
+export type User = { id: string; email: string; name: string; role: Role; profile?: Profile | undefined };
 
 export type DB = { ready: boolean; devices: Device[]; requests: Request[]; accounts: Account[]; user: User | null };
 

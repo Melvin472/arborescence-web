@@ -73,7 +73,8 @@ function LoginForm({ onForgot }: { onForgot: () => void }) {
       }
       const d = await reload();
       setBusy(false);
-      nav({ to: d.user?.role === "admin" ? "/catalogue" : "/suivi" });
+      if (d.user?.role === "admin") nav({ to: "/catalogue", search: { onglet: "demandes" } });
+      else nav({ to: "/suivi" });
     }}>
       <RequiredLegend />
       <label className="block"><FieldLabel required>E-mail</FieldLabel><input required type="email" autoComplete="email" className="field mt-1" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="vous@exemple.fr" /></label>

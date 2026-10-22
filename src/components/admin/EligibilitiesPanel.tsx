@@ -39,7 +39,7 @@ function EligibilityCard({ e }: { e: Eligibility }) {
   const decide = async (status: "validee" | "refusee") => {
     if (status === "refusee" && !message.trim()) return alert("Indiquez au demandeur la raison du refus.");
     setBusy(true);
-    await decideEligibility(e.id, status === "validee" ? { status, validUntil: untilFrom(validity), message } : { status, message });
+    await decideEligibility(e, status === "validee" ? { status, validUntil: untilFrom(validity), message } : { status, message });
     setBusy(false);
   };
 
@@ -62,13 +62,20 @@ function EligibilityCard({ e }: { e: Eligibility }) {
               <a className="underline" href={`https://annuaire-entreprises.data.gouv.fr/etablissement/${e.siret}`} target="_blank" rel="noopener noreferrer">annuaire</a>
             </div>
             <div><dt className="inline font-semibold">Participants attendus : </dt><dd className="inline">{e.participants}</dd></div>
+            {e.siretDetails && (
+              <div className="sm:col-span-2"><dt className="inline font-semibold">Annuaire officiel : </dt>
+                <dd className="inline">{e.siretDetails.name}{e.siretDetails.commune ? `, ${e.siretDetails.commune}` : ""} · {e.siretDetails.active ? "actif" : "fermé"}{e.siretDetails.isAssociation ? ` · association${e.siretDetails.rna ? ` (RNA ${e.siretDetails.rna})` : ""}` : ""}</dd>
+              </div>
+            )}
           </>
         )}
         {e.project && <div className="sm:col-span-2"><dt className="font-semibold">{e.profile === "Organisation" ? "Projet" : "Précisions"}</dt><dd className="whitespace-pre-line">{e.project}</dd></div>}
       </dl>
       <div className="flex flex-wrap gap-2 text-sm">
         <span className="font-semibold">Justificatifs :</span>
-        {e.documents.length ? e.documents.map((d) => (
+        {e.documentsDeletedAt ? (
+          <span className="text-muted-foreground">supprimés le {fmtDate(e.documentsDeletedAt)} après la décision (RGPD)</span>
+        ) : e.documents.length ? e.documents.map((d) => (
           <button key={d.path} className="underline" onClick={() => openDocument(d.path)}>📄 {d.name}</button>
         )) : <span className="text-muted-foreground">aucun</span>}
       </div>
@@ -86,6 +93,7 @@ function EligibilityCard({ e }: { e: Eligibility }) {
           <label className="text-sm"><span className="font-semibold">Message au demandeur</span> <span className="text-xs text-muted-foreground">(facultatif pour une validation, obligatoire pour un refus)</span>
             <textarea rows={2} className="field mt-1" value={message} onChange={(ev) => setMessage(ev.target.value)} />
           </label>
+          <p className="text-xs text-muted-foreground">Les justificatifs seront supprimés automatiquement après votre décision.</p>
           <div className="flex flex-wrap gap-2">
             <button className="btn btn-primary !py-2" disabled={busy} onClick={() => decide("validee")}>✓ Valider l'éligibilité</button>
             <button className="btn btn-ghost !py-2 !border-destructive text-destructive" disabled={busy} onClick={() => decide("refusee")}>Refuser</button>

@@ -1,4 +1,4 @@
-import { Badge } from "@/components/Layout";
+import { Badge, Stars } from "@/components/Layout";
 import { deleteFeedback, fmtDate, moderateFeedback, setContactHandled, useDB } from "@/lib/store";
 
 export function MessagesPanel() {
@@ -37,6 +37,7 @@ export function FeedbackPanel() {
           <div className="flex flex-wrap items-center gap-3">
             <Badge tone={f.approved ? "success" : "warning"}>{f.approved ? "Publié" : "En attente"}</Badge>
             <b>{f.author}</b>
+            <Stars value={f.rating} />
             <span className="text-sm text-muted-foreground ml-auto">{fmtDate(f.createdAt)}</span>
           </div>
           <p className="mt-2 text-sm">« {f.message} »</p>

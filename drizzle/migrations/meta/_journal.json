@@ -15,6 +15,13 @@
       "when": 1792664151878,
       "tag": "0001_eligibilite_workflow",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792678203573,
+      "tag": "0002_avis_frise_rgpd",
+      "breakpoints": true
     }
   ]
 }

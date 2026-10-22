@@ -1,109 +1,136 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Badge, Page, RequireLogin } from "@/components/Layout";
-import { deviceLabel, fmtDate, requestLabel, setRequestStatus, statusLabel, STATUSES, useDB, type Device, type Request } from "@/lib/store";
+import { Badge, Page, RequireLogin, ToneLegend, toneBg } from "@/components/Layout";
+import {
+  cancelRequest, deviceLabel, deviceTone, fmtDate, requestLabel, requestTone, statusLabel, STATUSES, useDB,
+  type Device, type Request,
+} from "@/lib/store";
 
 export const Route = createFileRoute("/suivi")({
-  head: () => ({ meta: [{ title: "Suivre une demande — Reboot Solidaire" }, { name: "description", content: "Statut, historique et notifications de vos dons et demandes." }, { property: "og:title", content: "Suivre une demande" }, { property: "og:description", content: "Statut, historique, notifications." }] }),
+  head: () => ({ meta: [{ title: "Mes dons et demandes — Reboot Solidaire" }, { name: "description", content: "Statut, historique et notifications de vos dons et demandes." }, { property: "og:title", content: "Mes dons et demandes" }, { property: "og:description", content: "Statut, historique, notifications." }] }),
   component: Suivi,
 });
 
-const reqSteps = ["recue", "validee", "expediee", "livree"] as const;
-
 function Suivi() {
+  return (
+    <Page title="Mes dons et demandes" intro="Suivez l'avancement de vos dons de matériel et de vos demandes d'équipement.">
+      <RequireLogin roles={["utilisateur"]}><SuiviContent /></RequireLogin>
+    </Page>
+  );
+}
+
+function SuiviContent() {
   const { db } = useDB();
   const [q, setQ] = useState("");
-  const u = db.user;
-  const isAdmin = u?.role === "admin";
+  const u = db.user!;
   const norm = q.trim().toUpperCase();
   const has = (...vals: (string | undefined)[]) => vals.some((v) => v && v.toUpperCase().includes(norm));
-
-  // Le gestionnaire peut rechercher dans tous les dossiers ; les autres uniquement dans les leurs.
-  const scopeAll = isAdmin && !!norm;
-  const myReqs = db.requests.filter((r) => scopeAll || r.owner === u?.email);
-  const myDons = db.devices.filter((d) => scopeAll || d.owner === u?.email);
+  const myReqs = db.requests.filter((r) => r.owner === u.email);
+  const myDons = db.devices.filter((d) => d.owner === u.email);
   const reqs = (norm ? myReqs.filter((r) => has(r.tracking, r.deviceType, r.category, r.need)) : myReqs).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const dons = (norm ? myDons.filter((d) => has(d.tracking, d.brand, d.ref, d.type, d.category)) : myDons).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
-  const showReqs = u?.role === "beneficiaire" || reqs.length > 0;
-  const showDons = u?.role !== "beneficiaire" || dons.length > 0;
-  const donorAll = db.devices.filter((d) => d.owner === u?.email);
-
   return (
-    <Page title="Suivre une demande" intro="Retrouvez le statut et l'historique de vos dons et demandes.">
-      <RequireLogin>
-        {u?.role !== "beneficiaire" && donorAll.length > 0 && !norm && <DonorDashboard devices={donorAll} />}
+    <>
+      {myDons.length > 0 && !norm && <DonorDashboard devices={myDons} />}
 
-        <form className="flex flex-wrap items-end gap-2 max-w-xl" onSubmit={(e) => e.preventDefault()} role="search">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <form className="flex flex-wrap items-end gap-2 max-w-xl flex-1" onSubmit={(e) => e.preventDefault()} role="search">
           <label className="flex-1 min-w-60"><span className="font-semibold">Rechercher</span>
             <input className="field mt-1" placeholder="N° de suivi (DON-1234, DEM-1234), marque, modèle…" value={q} onChange={(e) => setQ(e.target.value)} />
           </label>
           {q && <button type="button" className="btn btn-ghost !py-2" onClick={() => setQ("")}>Effacer</button>}
         </form>
-        {norm && <p className="text-sm text-muted-foreground mt-2">{reqs.length + dons.length} résultat(s) pour « {q.trim()} »{isAdmin ? " dans tous les dossiers" : ""}.</p>}
+        <ToneLegend />
+      </div>
+      {norm && <p className="text-sm text-muted-foreground mt-2">{reqs.length + dons.length} résultat(s) pour « {q.trim()} ».</p>}
 
-        {showReqs && (
-          <>
-            <h2 className="text-2xl font-bold mt-10 mb-4">{isAdmin && norm ? "Demandes" : "Mes demandes"}</h2>
-            <div className="grid gap-4">
-              {reqs.map((r) => <RequestCard key={r.id} r={r} />)}
-              {!reqs.length && <p className="text-muted-foreground">{norm ? "Aucune demande ne correspond à votre recherche." : "Aucune demande."}</p>}
-            </div>
-          </>
+      <h2 className="text-2xl font-bold mt-10 mb-4">Mes demandes de matériel</h2>
+      <div className="grid gap-4">
+        {reqs.map((r) => <RequestCard key={r.id} r={r} />)}
+        {!reqs.length && (
+          <p className="text-muted-foreground">{norm ? "Aucune demande ne correspond à votre recherche." : <>Aucune demande. <Link to="/demande" className="underline">Faire une demande</Link></>}</p>
         )}
+      </div>
 
-        {showDons && (
-          <>
-            <h2 className="text-2xl font-bold mt-10 mb-4">{isAdmin && norm ? "Dons" : "Mes dons"}</h2>
-            <div className="grid gap-3">
-              {dons.map((d) => (
-                <div key={d.id} className="card-soft p-5 flex flex-wrap justify-between items-center gap-2">
-                  <span><b>{d.tracking}</b> — {deviceLabel(d)} <span className="text-sm text-muted-foreground">· déclaré le {fmtDate(d.createdAt)}</span></span>
-                  <Badge tone={["disponible", "reserve", "expedie", "demande"].includes(d.status) ? "success" : "warning"}>{statusLabel.donateur[d.status]}</Badge>
-                </div>
-              ))}
-              {!dons.length && <p className="text-muted-foreground">{norm ? "Aucun don ne correspond à votre recherche." : "Aucun don."}</p>}
-            </div>
-          </>
+      <h2 className="text-2xl font-bold mt-10 mb-4">Mes dons</h2>
+      <div className="grid gap-3">
+        {dons.map((d) => (
+          <div key={d.id} className="card-soft p-5 flex flex-wrap justify-between items-center gap-2">
+            <span><b>{d.tracking}</b> — {deviceLabel(d)} <span className="text-sm text-muted-foreground">· déclaré le {fmtDate(d.createdAt)}</span></span>
+            <Badge tone={deviceTone[d.status]}>{statusLabel.utilisateur[d.status]}</Badge>
+          </div>
+        ))}
+        {!dons.length && (
+          <p className="text-muted-foreground">{norm ? "Aucun don ne correspond à votre recherche." : <>Aucun don. <Link to="/don" className="underline">Faire un don</Link></>}</p>
         )}
-      </RequireLogin>
-    </Page>
+      </div>
+    </>
   );
+}
+
+const STEPS = [
+  ["recue", "Reçue"], ["validee", "Approuvée"], ["attribuee", "Matériel attribué"], ["expediee", "Expédiée"], ["livree", "Livrée"],
+] as const;
+
+function stepIndex(r: Request) {
+  if (r.status === "livree") return 4;
+  if (r.status === "expediee") return 3;
+  if (r.status === "validee") return r.deviceIds.length >= r.quantity ? 2 : 1;
+  return 0;
 }
 
 function RequestCard({ r }: { r: Request }) {
   const { db, update } = useDB();
-  const i = reqSteps.indexOf(r.status as (typeof reqSteps)[number]);
+  const i = stepIndex(r);
   const assigned = r.deviceIds.map((id) => db.devices.find((d) => d.id === id)).filter((d): d is Device => !!d);
-  const canCancel = r.owner === db.user?.email && (r.status === "recue" || r.status === "validee");
+  const canCancel = r.status === "recue" || r.status === "validee";
+  const closed = r.status === "annulee" || r.status === "refusee";
   return (
     <div className="card-soft p-6">
       <div className="flex flex-wrap justify-between items-center gap-2">
-        <b className="font-display text-xl">{r.tracking}</b>
-        <span className="text-sm text-muted-foreground">Demandée le {fmtDate(r.createdAt)} · {r.profile}</span>
+        <span className="flex items-center gap-3"><b className="font-display text-xl">{r.tracking}</b><Badge tone={requestTone[r.status]}>{requestLabel[r.status]}</Badge></span>
+        <span className="text-sm text-muted-foreground">Demandée le {fmtDate(r.createdAt)}</span>
       </div>
       <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-1 mt-3 text-sm">
         <div><dt className="inline font-semibold">Matériel demandé : </dt><dd className="inline">{r.quantity} × {r.category ?? r.deviceType}</dd></div>
+        {r.deviceType !== "Périphérique" && <div><dt className="inline font-semibold">Système : </dt><dd className="inline">{r.osPref}</dd></div>}
         <div><dt className="inline font-semibold">Usage : </dt><dd className="inline">{r.need}</dd></div>
-        <div className="sm:col-span-2"><dt className="inline font-semibold">Matériel attribué : </dt>
-          <dd className="inline">{assigned.length ? assigned.map((d) => `${deviceLabel(d)}${d.ram ? ` (${d.ram}, ${d.disk})` : ""}`).join(", ") : "en attente d'attribution par l'équipe"}</dd>
-        </div>
+        {!closed && (
+          <div className="sm:col-span-2"><dt className="inline font-semibold">Matériel attribué : </dt>
+            <dd className="inline">{assigned.length ? assigned.map((d) => `${deviceLabel(d)}${d.ram ? ` (${d.ram}, ${d.disk}, ${d.os})` : ""}`).join(", ") : "en attente d'attribution par l'équipe"}</dd>
+          </div>
+        )}
         {r.details && <div className="sm:col-span-2"><dt className="inline font-semibold">Précisions : </dt><dd className="inline">{r.details}</dd></div>}
       </dl>
-      {r.status === "annulee" ? (
-        <p className="mt-4"><Badge>Demande annulée</Badge></p>
+
+      {r.status === "refusee" ? (
+        <div className="mt-4 rounded-xl bg-destructive/10 p-4 text-sm">
+          <p className="font-semibold text-destructive">Demande refusée : {r.refusalReason}</p>
+          {r.refusalMessage && <p className="mt-1 whitespace-pre-line">Message du gestionnaire : {r.refusalMessage}</p>}
+          <p className="mt-2 text-muted-foreground">Une question ? <Link to="/contact" className="underline">Contactez-nous</Link>.</p>
+        </div>
+      ) : r.status === "annulee" ? (
+        <p className="mt-4 text-sm text-muted-foreground">Vous avez annulé cette demande.</p>
       ) : (
-        <ol className="grid grid-cols-4 gap-2 mt-4">{reqSteps.map((s, k) => (
-          <li key={s} className={`text-xs font-semibold p-2 rounded-lg text-center ${k <= i ? "bg-success text-primary-foreground" : "bg-muted text-muted-foreground"}`}>{requestLabel[s]}</li>))}</ol>
+        <ol className="grid grid-cols-5 gap-2 mt-4" aria-label="Avancement de la demande">
+          {STEPS.map(([k, l], n) => (
+            <li key={k} aria-current={n === i ? "step" : undefined}
+              className={`text-xs font-semibold p-2 rounded-lg text-center ${n < i ? toneBg.success : n === i ? toneBg[requestTone[r.status]] : toneBg.muted}`}>
+              {l}
+            </li>
+          ))}
+        </ol>
       )}
-      <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
-        {r.status !== "annulee" && (
-          <label className="flex gap-2 items-center text-sm"><input type="checkbox" checked={r.notifications} onChange={(e) => update((d) => { const x = d.requests.find((y) => y.id === r.id); if (x) x.notifications = e.target.checked; })} /> Notifications par e-mail</label>
-        )}
-        {canCancel && (
-          <button className="btn btn-ghost !py-1.5 text-sm" onClick={() => { if (confirm(`Annuler la demande ${r.tracking} ?`)) update((d) => { setRequestStatus(d, r.id, "annulee"); }); }}>Annuler la demande</button>
-        )}
-      </div>
+
+      {!closed && (
+        <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
+          <label className="flex gap-2 items-center text-sm"><input type="checkbox" checked={r.notifications} onChange={(e) => update((d) => { const x = d.requests.find((y) => y.id === r.id); if (x) x.notifications = e.target.checked; })} /> Recevoir les mises à jour par e-mail</label>
+          {canCancel && (
+            <button className="btn btn-ghost !py-1.5 text-sm" onClick={() => { if (confirm(`Annuler la demande ${r.tracking} ?`)) update((d) => cancelRequest(d, r.id)); }}>Annuler la demande</button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -137,8 +164,8 @@ function DonorDashboard({ devices }: { devices: Device[] }) {
           <ul className="grid gap-2">
             {STATUSES.map((s) => { const n = count(s); return n ? (
               <li key={s} className="text-sm">
-                <div className="flex justify-between"><span>{statusLabel.donateur[s]}</span><span className="font-semibold">{n}</span></div>
-                <div className="h-2 rounded-full bg-muted mt-1"><div className="h-2 rounded-full bg-success" style={{ width: pct(n) }} /></div>
+                <div className="flex justify-between"><span>{statusLabel.utilisateur[s]}</span><span className="font-semibold">{n}</span></div>
+                <div className="h-2 rounded-full bg-muted mt-1"><div className={`h-2 rounded-full ${toneBg[deviceTone[s]]}`} style={{ width: pct(n) }} /></div>
               </li>
             ) : null; })}
           </ul>

@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Layout } from "@/components/Layout";
+import { useDB } from "@/lib/store";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -14,6 +15,9 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
+  const { db } = useDB();
+  const sent = db.stats.pcsSent;
+  const published = db.feedback.filter((f) => f.approved);
   return (
     <Layout>
       <section className="max-w-6xl mx-auto px-4 py-20 grid md:grid-cols-2 gap-12 items-center">
@@ -28,13 +32,24 @@ function Index() {
           <div className="mt-8 flex flex-wrap gap-3">
             <Link to="/don" className="btn btn-accent">Faire un don de matériel</Link>
             <Link to="/demande" className="btn btn-primary">Faire une demande de matériel</Link>
+            <Link to="/eligibilite" hash="test" className="btn btn-ghost">Faire un test d'éligibilité</Link>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
-          {[["3 min", "pour déclarer un don"], ["100 %", "anonyme entre donateur et bénéficiaire"], ["4", "étapes de suivi en temps réel"], ["0 €", "pour les bénéficiaires éligibles"]].map(([n, l], i) => (
+          {([["3 min", "pour déclarer un don"], ["100 %", "anonyme entre donateur et bénéficiaire"], ["live", "PC déjà envoyés aux bénéficiaires"], ["0 €", "pour les bénéficiaires éligibles"]] as const).map(([n, l], i) => (
             <div key={l} className={`card-soft p-6 ${i % 2 ? "mt-8" : ""}`}>
-              <div className="font-display text-4xl font-bold text-accent">{n}</div>
-              <div className="mt-2 text-sm font-semibold">{l}</div>
+              {n === "live" ? (
+                <>
+                  <div className="font-display text-4xl font-bold text-accent" aria-live="polite">{sent ?? "…"}</div>
+                  <div className="mt-2 text-sm font-semibold">{l}</div>
+                  <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground"><span className="h-2 w-2 rounded-full bg-success animate-pulse" aria-hidden="true" /> Mis à jour en direct</div>
+                </>
+              ) : (
+                <>
+                  <div className="font-display text-4xl font-bold text-accent">{n}</div>
+                  <div className="mt-2 text-sm font-semibold">{l}</div>
+                </>
+              )}
             </div>
           ))}
         </div>
@@ -45,6 +60,26 @@ function Index() {
             <div key={t}><h2 className="text-2xl font-bold">{t}</h2><p className="mt-2 opacity-80">{d}</p></div>
           ))}
         </div>
+      </section>
+      <section className="py-14 overflow-hidden" aria-labelledby="avis-title">
+        <div className="max-w-6xl mx-auto px-4 flex flex-wrap items-end justify-between gap-4">
+          <h2 id="avis-title" className="text-3xl font-bold text-primary">Ils en parlent</h2>
+          <Link to="/profil" className="text-sm font-semibold underline">Laisser mon avis</Link>
+        </div>
+        {published.length ? (
+          <div className="mt-6 overflow-x-auto motion-safe:overflow-hidden">
+            <ul className="marquee-track px-4" style={{ ["--marquee-duration" as string]: `${Math.max(20, published.length * 8)}s` }}>
+              {[...published, ...published].map((f, i) => (
+                <li key={`${f.id}-${i}`} aria-hidden={i >= published.length} className="card-soft p-6 w-80 shrink-0">
+                  <p className="text-sm">« {f.message} »</p>
+                  <p className="mt-3 text-sm font-semibold text-accent">— {f.author}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <p className="max-w-6xl mx-auto px-4 mt-4 text-muted-foreground">Les premiers retours de nos bénéficiaires et donateurs apparaîtront ici. Vous avez reçu ou donné du matériel ? Partagez votre expérience depuis votre profil.</p>
+        )}
       </section>
       <section className="max-w-6xl mx-auto px-4 py-16 grid md:grid-cols-2 gap-6">
         <Link to="/projet" className="card-soft p-8 hover:border-primary"><h2 className="text-2xl font-bold text-primary">Le projet →</h2><p className="mt-2 text-muted-foreground">Réemploi, impact et association.</p></Link>

@@ -30,6 +30,7 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
   --color-warning: var(--warning);
+  --color-info: var(--info);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -55,6 +56,7 @@
   --destructive-foreground: oklch(0.98 0 0);
   --success: oklch(0.6 0.13 155);
   --warning: oklch(0.78 0.14 80);
+  --info: oklch(0.55 0.13 250);
   --border: oklch(0.88 0.02 120);
   --input: oklch(0.88 0.02 120);
   --ring: oklch(0.55 0.1 160);
@@ -86,4 +88,15 @@
 @utility card-soft {
   background: var(--color-card); border: 1px solid var(--color-border); border-radius: 1.25rem;
   box-shadow: 0 10px 30px -20px color-mix(in oklab, var(--color-primary) 40%, transparent);
+}
+
+/* Bandeau d'avis défilant horizontalement (immobile si l'utilisateur limite les animations) */
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@utility marquee-track {
+  display: flex; width: max-content; gap: 1rem;
+  animation: marquee var(--marquee-duration, 40s) linear infinite;
+  &:hover { animation-play-state: paused; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track { animation: none; }
 }

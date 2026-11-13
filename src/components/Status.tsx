@@ -65,7 +65,7 @@ export function RequestTimeline({ r }: { r: Request }) {
     ];
   } else {
     const i = requestStepIndex(r);
-    const currentTone: Tone = r.status === "livree" ? "success" : r.status === "expediee" ? "accent" : r.status === "validee" ? "info" : "warning";
+    const currentTone: Tone = r.status === "livree" ? "done" : r.status === "expediee" ? "accent" : r.status === "validee" ? "info" : "warning";
     nodes = base.map((n, k) => ({ ...n, state: k < i ? "done" : k === i ? "current" : "todo", tone: k < i ? "success" : currentTone }));
   }
 

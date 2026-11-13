@@ -66,7 +66,8 @@ export const CPU_OPTIONS = [
 
 export const RAM_OPTIONS = ["2 Go", "4 Go", "8 Go", "12 Go", "16 Go", "32 Go"];
 export const DISK_OPTIONS = ["HDD 250 Go", "HDD 500 Go", "HDD 1 To", "SSD 128 Go", "SSD 256 Go", "SSD 512 Go", "SSD 1 To"];
-export const OS_OPTIONS = ["Linux Mint", "Ubuntu", "Windows 10", "Windows 11", "macOS", "ChromeOS Flex", "Aucun"];
+// Windows n'est plus proposé : sa réinstallation pose des problèmes de licence. Les PC sont livrés sous Linux.
+export const OS_OPTIONS = ["Linux Mint", "Ubuntu", "macOS", "ChromeOS Flex", "Aucun"];
 
 export const PROFILES = ["Particulier", "Organisation"] as const;
 export type Profile = (typeof PROFILES)[number];
@@ -83,7 +84,8 @@ export const NEED_OPTIONS = [
   "Autre",
 ];
 
-export const OS_PREFS = ["Linux", "Windows", "Pas de préférence"] as const;
+/** Système installé sur tous les ordinateurs distribués (gratuit, sans licence à acheter). */
+export const DEFAULT_OS = "Linux";
 
 /** Nombre maximum d'appareils par demande selon le profil. */
 export const MAX_QUANTITY: Record<Profile, number> = { Particulier: 1, Organisation: 30 };
@@ -92,16 +94,27 @@ export const MAX_QUANTITY: Record<Profile, number> = { Particulier: 1, Organisat
  * Justificatifs acceptés et durée d'éligibilité proposée par défaut (en mois).
  * Le gestionnaire peut ajuster la durée au moment de la validation.
  */
-export const JUSTIFS: Record<string, { label: string; doc: string; months: number; profile: Profile; legacy?: boolean }> = {
+export const JUSTIFS: Record<string, { label: string; doc: string; months: number; profile: Profile; legacy?: boolean; declarative?: boolean }> = {
   bourse: { label: "Étudiant boursier", doc: "Notification de bourse (CROUS) de l'année en cours", months: 12, profile: "Particulier" },
   france_travail: { label: "Demandeur d'emploi", doc: "Attestation d'inscription à France Travail de moins de 3 mois", months: 6, profile: "Particulier" },
   caf: { label: "Bénéficiaire des minima sociaux (RSA, AAH, prime d'activité…)", doc: "Attestation CAF ou MSA de moins de 3 mois", months: 12, profile: "Particulier" },
   c2s: { label: "Revenus modestes (Complémentaire santé solidaire)", doc: "Attestation de droits à la Complémentaire santé solidaire (C2S) en cours de validité", months: 12, profile: "Particulier" },
+  tranche: { label: "Revenus modestes (tranche d'imposition)", doc: "Déclaration sur l'honneur de votre tranche d'imposition (0 % ou 11 %), aucun document à envoyer", months: 12, profile: "Particulier", declarative: true },
   // Ancien critère, remplacé par la C2S (trop de données personnelles) : conservé pour afficher les anciens dossiers.
   impots: { label: "Revenus modestes (avis d'imposition)", doc: "Avis d'imposition", months: 12, profile: "Particulier", legacy: true },
   organisation: { label: "Organisation", doc: "Statuts, récépissé de déclaration ou attestation d'immatriculation", months: 24, profile: "Organisation" },
 };
 export const PARTICULIER_JUSTIFS = Object.entries(JUSTIFS).filter(([, j]) => j.profile === "Particulier" && !j.legacy);
+/** Tranches de l'impôt sur le revenu. Seules les tranches à 0 % et 11 % ouvrent l'éligibilité. */
+export const TAX_BRACKETS: [string, string][] = [
+  ["0 %", "0 % — je ne paie pas d'impôt sur le revenu"],
+  ["11 %", "11 %"],
+  ["30 %", "30 %"],
+  ["41 %", "41 %"],
+  ["45 %", "45 %"],
+];
+export const ELIGIBLE_TAX_BRACKETS = ["0 %", "11 %"];
+export const TAX_BRACKET_HELP = "C'est le taux d'impôt appliqué à la partie la plus élevée de vos revenus. Si vous ne payez pas d'impôt sur le revenu, choisissez 0 %.";
 export const VALIDITY_OPTIONS = [3, 6, 12, 18, 24, 36];
 
 export const REFUSAL_REASONS = [
@@ -117,11 +130,11 @@ export const CONTACT_SUBJECTS = ["Question sur un don", "Question sur une demand
 /** Questions fréquentes, affichées dans le pied de page (et balisées pour le référencement). */
 export const FAQ: [string, string][] = [
   ["Qui peut recevoir un ordinateur reconditionné ?", "Les particuliers en situation de précarité (étudiants boursiers, demandeurs d'emploi, bénéficiaires des minima sociaux, foyers aux revenus modestes) et les organisations qui accompagnent des publics éloignés du numérique : associations, écoles, structures de l'ESS."],
-  ["Comment prouver mon éligibilité ?", "Créez un compte, puis remplissez le formulaire d'éligibilité avec un justificatif (attestation CAF, France Travail, bourse, Complémentaire santé solidaire ou, pour une organisation, numéro SIRET et statuts). Un gestionnaire valide votre dossier pour une durée limitée, puis vos justificatifs sont supprimés."],
-  ["Combien de temps mon éligibilité est-elle valable ?", "Elle dépend du justificatif : 6 mois pour une attestation France Travail, 12 mois pour une bourse, une attestation CAF ou une attestation de Complémentaire santé solidaire, 24 mois pour une organisation. À l'échéance, il suffit de refaire une demande d'éligibilité."],
+  ["Comment prouver mon éligibilité ?", "Créez un compte, puis remplissez le formulaire d'éligibilité avec un justificatif (attestation CAF, France Travail, bourse, Complémentaire santé solidaire, simple déclaration de votre tranche d'imposition ou, pour une organisation, numéro SIRET et statuts). Nous ne demandons jamais d'avis d'imposition. Un gestionnaire valide votre dossier pour une durée limitée, puis vos justificatifs sont supprimés."],
+  ["Combien de temps mon éligibilité est-elle valable ?", "Elle dépend du justificatif : 6 mois pour une attestation France Travail, 12 mois pour une bourse, une attestation CAF, une attestation de Complémentaire santé solidaire ou une déclaration de tranche d'imposition, 24 mois pour une organisation. À l'échéance, il suffit de refaire une demande d'éligibilité."],
   ["Quel matériel puis-je donner ?", "Ordinateurs portables, tours et périphériques (écrans, claviers, souris, imprimantes…), même anciens ou en panne : nous les diagnostiquons et les réparons quand c'est possible."],
-  ["Mes données sont-elles effacées avant redistribution ?", "Oui. Chaque appareil est entièrement formaté et un système d'exploitation propre (Linux ou Windows) est réinstallé avant d'être confié à un bénéficiaire."],
-  ["Est-ce que je peux choisir mon système d'exploitation ?", "Oui, vous indiquez votre préférence (Linux, Windows ou pas de préférence) lors de votre demande."],
+  ["Mes données sont-elles effacées avant redistribution ?", "Oui. Chaque appareil est entièrement formaté et un système d'exploitation propre (Linux) est réinstallé avant d'être confié à un bénéficiaire."],
+  ["Quel système est installé sur les ordinateurs ?", "Tous les ordinateurs sont livrés sous Linux (par exemple Linux Mint) : un système gratuit, sans licence à acheter, qui permet de naviguer sur Internet, faire de la bureautique et ses démarches en ligne."],
   ["Que deviennent mes justificatifs ?", "Ils ne sont consultés que par le gestionnaire de l'association et sont supprimés dès que votre dossier d'éligibilité est traité. Seule la décision (validée ou refusée, et sa date de fin) est conservée."],
   ["Donateurs et bénéficiaires se connaissent-ils ?", "Non. L'anonymat est strict dans les deux sens : seul le gestionnaire de l'association voit les informations nécessaires au traitement."],
   ["Le service est-il payant ?", "Non, le matériel est remis gratuitement aux bénéficiaires éligibles."],

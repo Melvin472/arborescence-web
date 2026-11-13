@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Badge, ErrorMsg, FieldLabel, Page, RequiredLegend, RequireLogin } from "@/components/Layout";
-import { JUSTIFS, ORG_TYPES, PARTICULIER_JUSTIFS } from "@/lib/referentiel";
+import { ELIGIBLE_TAX_BRACKETS, JUSTIFS, ORG_TYPES, PARTICULIER_JUSTIFS, TAX_BRACKET_HELP, TAX_BRACKETS } from "@/lib/referentiel";
 import {
   activeEligibility, eligibilityLabel, eligibilityTone, fmtDate, isValidSiret, lookupSiret, myEligibilities, pendingEligibility,
   submitEligibility, useDB, type SiretDetails,
@@ -138,17 +138,27 @@ function ParticulierForm({ onSent }: { onSent: (months: number) => void }) {
   const [justif, setJustif] = useState("");
   const [doc, setDoc] = useState<File | null>(null);
   const [extra, setExtra] = useState<File | null>(null);
+  const [bracket, setBracket] = useState("");
+  const [sworn, setSworn] = useState(false);
   const [details, setDetails] = useState("");
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const j = JUSTIFS[justif];
+  const declarative = !!j?.declarative;
+  const bracketKo = declarative && !!bracket && !ELIGIBLE_TAX_BRACKETS.includes(bracket);
   return (
     <form className="card-soft p-8 max-w-2xl grid gap-5" onSubmit={async (e) => {
       e.preventDefault();
-      if (!j || !doc) return setErr("Choisissez votre situation et joignez le justificatif.");
+      if (!j) return setErr("Choisissez votre situation.");
+      if (declarative) {
+        if (!bracket) return setErr("Indiquez votre tranche d'imposition.");
+        if (bracketKo) return setErr("Ce critère est réservé aux foyers non imposables ou imposés à 11 %. Si une autre situation de la liste vous correspond, choisissez-la.");
+      } else if (!doc) return setErr("Joignez le justificatif.");
+      setErr(null);
       setBusy(true);
-      const ok = await submitEligibility(db, { justifType: justif, siretVerified: false, project: details.trim() }, [doc, ...(extra ? [extra] : [])]);
+      const ok = await submitEligibility(db, { justifType: justif, siretVerified: false, project: details.trim(), declaredTaxBracket: declarative ? bracket : undefined },
+        declarative ? [] : [doc!, ...(extra ? [extra] : [])]);
       setBusy(false);
       if (ok) onSent(j.months);
     }}>
@@ -162,17 +172,36 @@ function ParticulierForm({ onSent }: { onSent: (months: number) => void }) {
         <div className="grid gap-2">
           {PARTICULIER_JUSTIFS.map(([k, v]) => (
             <label key={k} className={`flex gap-3 items-start p-3 rounded-xl border-2 cursor-pointer ${justif === k ? "border-primary bg-secondary" : ""}`}>
-              <input type="radio" name="justif" className="mt-1" checked={justif === k} onChange={() => setJustif(k)} />
-              <span><b>{v.label}</b><br /><span className="text-sm text-muted-foreground">Justificatif : {v.doc}</span></span>
+              <input type="radio" name="justif" className="mt-1" checked={justif === k} onChange={() => { setJustif(k); setErr(null); }} />
+              <span><b>{v.label}</b><br /><span className="text-sm text-muted-foreground">{v.declarative ? v.doc : `Justificatif : ${v.doc}`}</span></span>
             </label>
           ))}
         </div>
       </fieldset>
-      {j && <FileField label={`Justificatif : ${j.doc}`} required file={doc} onFile={setDoc} />}
-      <FileField label="Pièce complémentaire" file={extra} onFile={setExtra} hint="Par exemple un certificat de scolarité ou une pièce d'identité si le justificatif ne mentionne pas votre nom." />
+      {declarative ? (
+        <div className="grid gap-3">
+          <label className="max-w-sm"><FieldLabel required>Votre tranche d'imposition</FieldLabel>
+            <select required className="field mt-1" value={bracket} onChange={(e) => setBracket(e.target.value)} aria-describedby="tranche-aide">
+              <option value="">Choisir…</option>
+              {TAX_BRACKETS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </label>
+          <p id="tranche-aide" className="text-sm text-muted-foreground">{TAX_BRACKET_HELP}</p>
+          {bracketKo && <p role="alert" className="text-sm text-destructive font-semibold">Ce critère est réservé aux foyers non imposables ou imposés à 11 %.</p>}
+          <label className="flex gap-2 items-start text-sm">
+            <input required type="checkbox" className="mt-1" checked={sworn} onChange={(e) => setSworn(e.target.checked)} />
+            <span>Je certifie sur l'honneur que cette information est exacte.<span className="text-destructive" aria-hidden="true">*</span></span>
+          </label>
+        </div>
+      ) : (
+        <>
+          {j && <FileField label={`Justificatif : ${j.doc}`} required file={doc} onFile={setDoc} />}
+          <FileField label="Pièce complémentaire" file={extra} onFile={setExtra} hint="Par exemple un certificat de scolarité ou une pièce d'identité si le justificatif ne mentionne pas votre nom." />
+        </>
+      )}
       <label><FieldLabel>Précisions</FieldLabel><textarea rows={2} className="field mt-1" value={details} onChange={(e) => setDetails(e.target.value)} /></label>
       {j && <p className="rounded-lg bg-secondary p-3 text-sm">Si votre dossier est validé, vous serez éligible pendant <b>{months(j.months)}</b>.</p>}
-      <Consent checked={consent} onChange={setConsent} />
+      {!declarative && <Consent checked={consent} onChange={setConsent} />}
       <ErrorMsg msg={err} />
       <button className="btn btn-accent" disabled={busy}>{busy ? "Envoi…" : "Envoyer ma demande d'éligibilité"}</button>
     </form>

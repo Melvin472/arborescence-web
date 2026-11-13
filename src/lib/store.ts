@@ -42,6 +42,8 @@ export type Eligibility = {
   id: string; ownerId: string; owner: string; profile: Profile; justifType: string;
   orgType?: string | undefined; orgName?: string | undefined; siret?: string | undefined; siretVerified: boolean;
   siretDetails?: SiretDetails | undefined; documentsDeletedAt?: string | undefined;
+  /** Tranche d'imposition déclarée sur l'honneur (critère « revenus modestes »). */
+  declaredTaxBracket?: string | undefined;
   project: string; participants?: number | undefined; documents: EligibilityDoc[];
   status: EligibilityStatus; validUntil?: string | undefined; decisionMessage: string; decidedAt?: string | undefined; createdAt: string;
 };
@@ -102,7 +104,7 @@ const fromEligibility = (r: any): Eligibility => ({
   id: r.id, ownerId: r.owner_id, owner: r.owner, profile: r.profile, justifType: r.justif_type, orgType: u(r.org_type), orgName: u(r.org_name),
   siret: u(r.siret), siretVerified: r.siret_verified, project: r.project, participants: u(r.participants),
   documents: Array.isArray(r.documents) ? r.documents : [], status: r.status, validUntil: u(r.valid_until),
-  siretDetails: u(r.siret_details), documentsDeletedAt: u(r.documents_deleted_at),
+  siretDetails: u(r.siret_details), documentsDeletedAt: u(r.documents_deleted_at), declaredTaxBracket: u(r.declared_tax_bracket),
   decisionMessage: r.decision_message, decidedAt: u(r.decided_at), createdAt: r.created_at,
 });
 
@@ -286,7 +288,7 @@ export const pendingEligibility = (db: DB) => myEligibilities(db).find((e) => e.
 
 export async function submitEligibility(
   db: DB,
-  data: Pick<Eligibility, "justifType" | "orgType" | "orgName" | "siret" | "siretVerified" | "siretDetails" | "project" | "participants">,
+  data: Pick<Eligibility, "justifType" | "orgType" | "orgName" | "siret" | "siretVerified" | "siretDetails" | "project" | "participants" | "declaredTaxBracket">,
   files: File[],
 ): Promise<boolean> {
   const user = db.user!;
@@ -299,7 +301,7 @@ export async function submitEligibility(
   }
   return act(supabase.from("eligibilities").insert({
     owner: user.email, profile: user.profile ?? "Particulier", justif_type: data.justifType,
-    org_type: data.orgType ?? null, org_name: data.orgName ?? null, siret: data.siret ?? null, siret_verified: data.siretVerified, siret_details: (data.siretDetails ?? null) as unknown as Json,
+    org_type: data.orgType ?? null, org_name: data.orgName ?? null, siret: data.siret ?? null, siret_verified: data.siretVerified, siret_details: (data.siretDetails ?? null) as unknown as Json, declared_tax_bracket: data.declaredTaxBracket ?? null,
     project: data.project, participants: data.participants ?? null, documents: documents as unknown as Json,
   }));
 }
@@ -410,16 +412,18 @@ export function cancelRequest(d: DB, id: string) {
 
 /**
  * Une même couleur = une même signification, partout sur le site :
- * jaune = en attente, bleu = en cours, orange = en route, vert = terminé / prêt, rouge = refusé, gris = annulé / expiré.
+ * jaune = en attente, bleu = en cours, vert = prêt / validé, violet = réservé, orange = en route,
+ * vert foncé = terminé / livré, rouge = refusé, gris = annulé / expiré.
  */
-export type Tone = "warning" | "info" | "accent" | "success" | "destructive" | "muted";
-export const deviceTone: Record<Status, Tone> = { enregistre: "warning", diagnostic: "info", disponible: "success", reserve: "info", expedie: "accent", demande: "success" };
-export const requestTone: Record<RequestStatus, Tone> = { recue: "warning", validee: "info", expediee: "accent", livree: "success", annulee: "muted", refusee: "destructive" };
+export type Tone = "warning" | "info" | "success" | "reserved" | "accent" | "done" | "destructive" | "muted";
+// Chaque statut du matériel a sa propre couleur (aucune n'est utilisée deux fois).
+export const deviceTone: Record<Status, Tone> = { enregistre: "warning", diagnostic: "info", disponible: "success", reserve: "reserved", expedie: "accent", demande: "done" };
+export const requestTone: Record<RequestStatus, Tone> = { recue: "warning", validee: "info", expediee: "accent", livree: "done", annulee: "muted", refusee: "destructive" };
 export const eligibilityTone = (e: Eligibility): Tone => (isExpired(e) ? "muted" : ({ en_attente: "warning", validee: "success", refusee: "destructive" } as const)[e.status]);
 /** Libellé d'une catégorie de statut (même couleur = même signification). */
-export const TONE_LABEL: Record<Tone, string> = { warning: "En attente", info: "En cours", accent: "En route", success: "Terminé · prêt", destructive: "Refusé", muted: "Annulé" };
-export const TONE_ORDER: Tone[] = ["warning", "info", "accent", "success", "destructive", "muted"];
-export const TONE_LEGEND: [Tone, string][] = [["warning", "En attente"], ["info", "En cours"], ["accent", "En route"], ["success", "Terminé / prêt"], ["destructive", "Refusé"], ["muted", "Annulé"]];
+export const TONE_LABEL: Record<Tone, string> = { warning: "En attente", info: "En cours", success: "Prêt · validé", reserved: "Réservé", accent: "En route", done: "Terminé · livré", destructive: "Refusé", muted: "Annulé" };
+export const TONE_ORDER: Tone[] = ["warning", "info", "success", "reserved", "accent", "done", "destructive", "muted"];
+export const TONE_LEGEND: [Tone, string][] = TONE_ORDER.map((t) => [t, TONE_LABEL[t]]);
 
 export const statusLabel: Record<Role, Record<Status, string>> = {
   utilisateur: { enregistre: "En attente de dépôt", diagnostic: "En cours de réparation", disponible: "Reconditionné", reserve: "Attribué à un bénéficiaire", expedie: "Expédié", demande: "Distribué" },

@@ -198,6 +198,8 @@ const toneClass: Record<Tone, string> = {
   success: "bg-success text-primary-foreground",
   warning: "bg-warning text-foreground",
   info: "bg-info text-primary-foreground",
+  reserved: "bg-reserved text-primary-foreground",
+  done: "bg-primary text-primary-foreground",
   accent: "bg-accent text-accent-foreground",
   destructive: "bg-destructive text-destructive-foreground",
 };

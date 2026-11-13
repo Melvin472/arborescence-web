@@ -115,6 +115,7 @@ export type Database = {
       }
       eligibilities: {
         Row: {
+          declared_tax_bracket: string | null
           documents_deleted_at: string | null
           siret_details: Json | null
           created_at: string
@@ -136,6 +137,7 @@ export type Database = {
           valid_until: string | null
         }
         Insert: {
+          declared_tax_bracket?: string | null
           documents_deleted_at?: string | null
           siret_details?: Json | null
           created_at?: string
@@ -157,6 +159,7 @@ export type Database = {
           valid_until?: string | null
         }
         Update: {
+          declared_tax_bracket?: string | null
           documents_deleted_at?: string | null
           siret_details?: Json | null
           created_at?: string

@@ -53,6 +53,7 @@ function EligibilityCard({ e }: { e: Eligibility }) {
       </div>
       <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-1 text-sm">
         <div><dt className="inline font-semibold">Situation : </dt><dd className="inline">{j?.label ?? e.justifType}</dd></div>
+        {e.declaredTaxBracket && <div><dt className="inline font-semibold">Tranche déclarée : </dt><dd className="inline">{e.declaredTaxBracket} (sur l'honneur)</dd></div>}
         {e.profile === "Organisation" && (
           <>
             <div><dt className="inline font-semibold">Type : </dt><dd className="inline">{e.orgType}</dd></div>
@@ -73,7 +74,9 @@ function EligibilityCard({ e }: { e: Eligibility }) {
       </dl>
       <div className="flex flex-wrap gap-2 text-sm">
         <span className="font-semibold">Justificatifs :</span>
-        {e.documentsDeletedAt ? (
+        {j?.declarative ? (
+          <span className="text-muted-foreground">aucun (déclaration sur l'honneur)</span>
+        ) : e.documentsDeletedAt ? (
           <span className="text-muted-foreground">supprimés le {fmtDate(e.documentsDeletedAt)} après la décision (RGPD)</span>
         ) : e.documents.length ? e.documents.map((d) => (
           <button key={d.path} className="underline" onClick={() => openDocument(d.path)}>📄 {d.name}</button>

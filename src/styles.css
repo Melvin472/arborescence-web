@@ -31,6 +31,7 @@
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-info: var(--info);
+  --color-reserved: var(--reserved);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -57,6 +58,7 @@
   --success: oklch(0.6 0.13 155);
   --warning: oklch(0.78 0.14 80);
   --info: oklch(0.55 0.13 250);
+  --reserved: oklch(0.5 0.17 305);
   --border: oklch(0.88 0.02 120);
   --input: oklch(0.88 0.02 120);
   --ring: oklch(0.55 0.1 160);

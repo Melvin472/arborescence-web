@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Badge, FieldLabel, Page, RequiredLegend, RequireLogin } from "@/components/Layout";
-import { DEVICE_TYPES, MAX_QUANTITY, NEED_OPTIONS, OS_PREFS, PERIPHERAL_CATEGORIES } from "@/lib/referentiel";
+import { DEFAULT_OS, DEVICE_TYPES, MAX_QUANTITY, NEED_OPTIONS, PERIPHERAL_CATEGORIES } from "@/lib/referentiel";
 import { activeEligibility, code, fmtDate, isActiveRequest, pendingEligibility, requestLabel, today, useDB } from "@/lib/store";
 
 export const Route = createFileRoute("/demande")({
@@ -9,7 +9,7 @@ export const Route = createFileRoute("/demande")({
   component: Demande,
 });
 
-const empty = { deviceType: "", category: "", quantity: 1, need: "", details: "", osPref: "", notifications: true };
+const empty = { deviceType: "", category: "", quantity: 1, need: "", details: "", notifications: true };
 
 function Demande() {
   const { db, update } = useDB();
@@ -66,14 +66,13 @@ function Demande() {
         <form className="card-soft p-8 max-w-2xl grid gap-5" onSubmit={(e) => {
           e.preventDefault();
           const category = f.deviceType === "Périphérique" ? f.category || "Autre" : undefined;
-          if (f.deviceType !== "Périphérique" && !f.osPref) return setErr("Indiquez le système d'exploitation souhaité.");
           const dup = db.requests.find((r) => r.owner === u!.email && isActiveRequest(r) && r.deviceType === f.deviceType && (r.category ?? "") === (category ?? ""));
           if (dup) return setErr(`Vous avez déjà une demande en cours pour ce type de matériel (${dup.tracking} — ${requestLabel[dup.status]}). Annulez-la depuis le suivi pour en faire une nouvelle.`);
           const t = code("DEM");
           update((d) => {
             d.requests.push({
               id: crypto.randomUUID(), tracking: t, owner: u!.email, profile,
-              deviceType: f.deviceType, category, quantity: Math.min(f.quantity, max), need: f.need, details: f.details.trim(), osPref: f.deviceType === "Périphérique" ? "Pas de préférence" : f.osPref,
+              deviceType: f.deviceType, category, quantity: Math.min(f.quantity, max), need: f.need, details: f.details.trim(), osPref: f.deviceType === "Périphérique" ? "Pas de préférence" : DEFAULT_OS,
               deviceIds: [], status: "recue", createdAt: today(), notifications: f.notifications, refusalMessage: "",
             });
           });
@@ -115,17 +114,8 @@ function Demande() {
             </label>
           </div>
           {max === 1 && <p className="text-sm text-muted-foreground">Les particuliers peuvent demander un seul appareil à la fois.</p>}
-          {f.deviceType !== "Périphérique" && (
-            <fieldset>
-              <legend className="mb-2"><FieldLabel required>Système d'exploitation souhaité</FieldLabel></legend>
-              <div className="flex flex-wrap gap-2">
-                {OS_PREFS.map((o) => (
-                  <label key={o} className={`flex gap-2 items-center px-4 py-2 rounded-full border-2 cursor-pointer ${f.osPref === o ? "border-primary bg-secondary" : ""}`}>
-                    <input type="radio" name="os" required checked={f.osPref === o} onChange={() => setF({ ...f, osPref: o })} /> {o}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
+          {f.deviceType && f.deviceType !== "Périphérique" && (
+            <p className="rounded-lg bg-secondary p-3 text-sm">Les ordinateurs sont livrés sous <b>Linux</b>, un système gratuit et sans licence à acheter, adapté à Internet, à la bureautique et aux démarches en ligne.</p>
           )}
           <label><FieldLabel>Précisions</FieldLabel>
             <textarea rows={3} className="field mt-1" placeholder={profile === "Particulier" ? "ex. logiciels nécessaires, contraintes particulières…" : "ex. nombre de bénéficiaires ou d'élèves concernés, logiciels utilisés…"} value={f.details} onChange={(e) => setF({ ...f, details: e.target.value })} />

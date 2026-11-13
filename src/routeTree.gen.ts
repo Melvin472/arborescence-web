@@ -12,14 +12,14 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CatalogueRouteImport } from './routes/catalogue'
 import { Route as ConnexionRouteImport } from './routes/connexion'
+import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DemandeRouteImport } from './routes/demande'
 import { Route as DonRouteImport } from './routes/don'
 import { Route as EligibiliteRouteImport } from './routes/eligibilite'
-import { Route as ProjetRouteImport } from './routes/projet'
-import { Route as SuiviRouteImport } from './routes/suivi'
-import { Route as ReinitialiserRouteImport } from './routes/reinitialiser'
 import { Route as ProfilRouteImport } from './routes/profil'
-import { Route as ContactRouteImport } from './routes/contact'
+import { Route as ProjetRouteImport } from './routes/projet'
+import { Route as ReinitialiserRouteImport } from './routes/reinitialiser'
+import { Route as SuiviRouteImport } from './routes/suivi'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,6 +34,11 @@ const CatalogueRoute = CatalogueRouteImport.update({
 const ConnexionRoute = ConnexionRouteImport.update({
   id: '/connexion',
   path: '/connexion',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DemandeRoute = DemandeRouteImport.update({
@@ -51,19 +56,14 @@ const EligibiliteRoute = EligibiliteRouteImport.update({
   path: '/eligibilite',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProjetRoute = ProjetRouteImport.update({
-  id: '/projet',
-  path: '/projet',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ContactRoute = ContactRouteImport.update({
-  id: '/contact',
-  path: '/contact',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ProfilRoute = ProfilRouteImport.update({
   id: '/profil',
   path: '/profil',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjetRoute = ProjetRouteImport.update({
+  id: '/projet',
+  path: '/projet',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReinitialiserRoute = ReinitialiserRouteImport.update({
@@ -81,41 +81,41 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/catalogue': typeof CatalogueRoute
   '/connexion': typeof ConnexionRoute
+  '/contact': typeof ContactRoute
   '/demande': typeof DemandeRoute
   '/don': typeof DonRoute
   '/eligibilite': typeof EligibiliteRoute
-  '/projet': typeof ProjetRoute
-  '/suivi': typeof SuiviRoute
-  '/reinitialiser': typeof ReinitialiserRoute
   '/profil': typeof ProfilRoute
-  '/contact': typeof ContactRoute
+  '/projet': typeof ProjetRoute
+  '/reinitialiser': typeof ReinitialiserRoute
+  '/suivi': typeof SuiviRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/catalogue': typeof CatalogueRoute
   '/connexion': typeof ConnexionRoute
+  '/contact': typeof ContactRoute
   '/demande': typeof DemandeRoute
   '/don': typeof DonRoute
   '/eligibilite': typeof EligibiliteRoute
-  '/projet': typeof ProjetRoute
-  '/suivi': typeof SuiviRoute
-  '/reinitialiser': typeof ReinitialiserRoute
   '/profil': typeof ProfilRoute
-  '/contact': typeof ContactRoute
+  '/projet': typeof ProjetRoute
+  '/reinitialiser': typeof ReinitialiserRoute
+  '/suivi': typeof SuiviRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/catalogue': typeof CatalogueRoute
   '/connexion': typeof ConnexionRoute
+  '/contact': typeof ContactRoute
   '/demande': typeof DemandeRoute
   '/don': typeof DonRoute
   '/eligibilite': typeof EligibiliteRoute
-  '/projet': typeof ProjetRoute
-  '/suivi': typeof SuiviRoute
-  '/reinitialiser': typeof ReinitialiserRoute
   '/profil': typeof ProfilRoute
-  '/contact': typeof ContactRoute
+  '/projet': typeof ProjetRoute
+  '/reinitialiser': typeof ReinitialiserRoute
+  '/suivi': typeof SuiviRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -123,54 +123,54 @@ export interface FileRouteTypes {
     | '/'
     | '/catalogue'
     | '/connexion'
+    | '/contact'
     | '/demande'
     | '/don'
     | '/eligibilite'
-    | '/projet'
-    | '/suivi'
-    | '/reinitialiser'
     | '/profil'
-    | '/contact'
+    | '/projet'
+    | '/reinitialiser'
+    | '/suivi'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/catalogue'
     | '/connexion'
+    | '/contact'
     | '/demande'
     | '/don'
     | '/eligibilite'
-    | '/projet'
-    | '/suivi'
-    | '/reinitialiser'
     | '/profil'
-    | '/contact'
+    | '/projet'
+    | '/reinitialiser'
+    | '/suivi'
   id:
     | '__root__'
     | '/'
     | '/catalogue'
     | '/connexion'
+    | '/contact'
     | '/demande'
     | '/don'
     | '/eligibilite'
-    | '/projet'
-    | '/suivi'
-    | '/reinitialiser'
     | '/profil'
-    | '/contact'
+    | '/projet'
+    | '/reinitialiser'
+    | '/suivi'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CatalogueRoute: typeof CatalogueRoute
   ConnexionRoute: typeof ConnexionRoute
+  ContactRoute: typeof ContactRoute
   DemandeRoute: typeof DemandeRoute
   DonRoute: typeof DonRoute
   EligibiliteRoute: typeof EligibiliteRoute
-  ProjetRoute: typeof ProjetRoute
-  SuiviRoute: typeof SuiviRoute
-  ReinitialiserRoute: typeof ReinitialiserRoute
   ProfilRoute: typeof ProfilRoute
-  ContactRoute: typeof ContactRoute
+  ProjetRoute: typeof ProjetRoute
+  ReinitialiserRoute: typeof ReinitialiserRoute
+  SuiviRoute: typeof SuiviRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -196,6 +196,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConnexionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demande': {
       id: '/demande'
       path: '/demande'
@@ -217,25 +224,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EligibiliteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/projet': {
-      id: '/projet'
-      path: '/projet'
-      fullPath: '/projet'
-      preLoaderRoute: typeof ProjetRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/contact': {
-      id: '/contact'
-      path: '/contact'
-      fullPath: '/contact'
-      preLoaderRoute: typeof ContactRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/profil': {
       id: '/profil'
       path: '/profil'
       fullPath: '/profil'
       preLoaderRoute: typeof ProfilRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projet': {
+      id: '/projet'
+      path: '/projet'
+      fullPath: '/projet'
+      preLoaderRoute: typeof ProjetRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reinitialiser': {
@@ -259,14 +259,14 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CatalogueRoute: CatalogueRoute,
   ConnexionRoute: ConnexionRoute,
+  ContactRoute: ContactRoute,
   DemandeRoute: DemandeRoute,
   DonRoute: DonRoute,
   EligibiliteRoute: EligibiliteRoute,
-  ProjetRoute: ProjetRoute,
-  SuiviRoute: SuiviRoute,
-  ReinitialiserRoute: ReinitialiserRoute,
   ProfilRoute: ProfilRoute,
-  ContactRoute: ContactRoute,
+  ProjetRoute: ProjetRoute,
+  ReinitialiserRoute: ReinitialiserRoute,
+  SuiviRoute: SuiviRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

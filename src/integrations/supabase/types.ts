@@ -119,6 +119,7 @@ export type Database = {
           decided_at: string | null
           decision_message: string
           documents: Json
+          documents_deleted_at: string | null
           id: string
           justif_type: string
           org_name: string | null
@@ -129,6 +130,7 @@ export type Database = {
           profile: string
           project: string
           siret: string | null
+          siret_details: Json | null
           siret_verified: boolean
           status: string
           valid_until: string | null
@@ -138,6 +140,7 @@ export type Database = {
           decided_at?: string | null
           decision_message?: string
           documents?: Json
+          documents_deleted_at?: string | null
           id?: string
           justif_type: string
           org_name?: string | null
@@ -148,6 +151,7 @@ export type Database = {
           profile: string
           project?: string
           siret?: string | null
+          siret_details?: Json | null
           siret_verified?: boolean
           status?: string
           valid_until?: string | null
@@ -157,6 +161,7 @@ export type Database = {
           decided_at?: string | null
           decision_message?: string
           documents?: Json
+          documents_deleted_at?: string | null
           id?: string
           justif_type?: string
           org_name?: string | null
@@ -167,6 +172,7 @@ export type Database = {
           profile?: string
           project?: string
           siret?: string | null
+          siret_details?: Json | null
           siret_verified?: boolean
           status?: string
           valid_until?: string | null
@@ -180,6 +186,7 @@ export type Database = {
           created_at: string
           id: string
           message: string
+          rating: number
           user_id: string
         }
         Insert: {
@@ -188,6 +195,7 @@ export type Database = {
           created_at?: string
           id?: string
           message: string
+          rating?: number
           user_id?: string
         }
         Update: {
@@ -196,6 +204,7 @@ export type Database = {
           created_at?: string
           id?: string
           message?: string
+          rating?: number
           user_id?: string
         }
         Relationships: []
@@ -253,8 +262,11 @@ export type Database = {
       }
       requests: {
         Row: {
+          approved_at: string | null
           category: string | null
+          closed_at: string | null
           created_at: string
+          delivered_at: string | null
           details: string
           device_ids: string[]
           device_type: string
@@ -268,12 +280,16 @@ export type Database = {
           quantity: number
           refusal_message: string
           refusal_reason: string | null
+          shipped_at: string | null
           status: string
           tracking: string
         }
         Insert: {
+          approved_at?: string | null
           category?: string | null
+          closed_at?: string | null
           created_at?: string
+          delivered_at?: string | null
           details?: string
           device_ids?: string[]
           device_type: string
@@ -287,12 +303,16 @@ export type Database = {
           quantity?: number
           refusal_message?: string
           refusal_reason?: string | null
+          shipped_at?: string | null
           status?: string
           tracking: string
         }
         Update: {
+          approved_at?: string | null
           category?: string | null
+          closed_at?: string | null
           created_at?: string
+          delivered_at?: string | null
           details?: string
           device_ids?: string[]
           device_type?: string
@@ -306,6 +326,7 @@ export type Database = {
           quantity?: number
           refusal_message?: string
           refusal_reason?: string | null
+          shipped_at?: string | null
           status?: string
           tracking?: string
         }

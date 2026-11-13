@@ -18,3 +18,4 @@
 - Requests require a valid eligibility (`public.is_eligible`, table `eligibilities`, validated by the admin with an expiry date). Justificatifs live in the private `justificatifs` storage bucket, one folder per user id.
 - The request workflow (recue → validee → expediee → livree, refus motivé before shipping) is enforced in `guard_request_update`; automatic user messages are inserted into `notifications` by DB triggers.
 - Schema changes go in a new file under `drizzle/migrations/` registered in `meta/_journal.json`.
+- A migration file is only a record until it is applied: after writing or editing one, apply it to the live backend, regenerate the generated Supabase types, and confirm the columns exist in the live schema before trusting that app code can read or write them.

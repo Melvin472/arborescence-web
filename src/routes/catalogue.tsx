@@ -7,8 +7,8 @@ import { Page, RequireLogin } from "@/components/Layout";
 import { ADMIN_TABS, type AdminTab } from "@/lib/referentiel";
 
 export const Route = createFileRoute("/catalogue")({
-  validateSearch: (s: Record<string, unknown>): { onglet?: AdminTab } => ({
-    onglet: ADMIN_TABS.some(([k]) => k === s.onglet) ? (s.onglet as AdminTab) : undefined,
+  validateSearch: (s: Record<string, unknown>): { onglet?: AdminTab | undefined } => ({
+    onglet: ADMIN_TABS.some(([k]) => k === s["onglet"]) ? (s["onglet"] as AdminTab) : undefined,
   }),
   head: () => ({ meta: [{ title: "Espace gestionnaire — Reboot Solidaire" }, { name: "robots", content: "noindex" }] }),
   component: Catalogue,

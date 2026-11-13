@@ -46,10 +46,10 @@ export type Database = {
       }
       devices: {
         Row: {
-          comment: string
           age: string
           brand: string
           category: string | null
+          comment: string
           cpu: string
           created_at: string
           disk: string | null
@@ -68,10 +68,10 @@ export type Database = {
           type: string
         }
         Insert: {
-          comment?: string
           age?: string
           brand: string
           category?: string | null
+          comment?: string
           cpu?: string
           created_at?: string
           disk?: string | null
@@ -90,10 +90,10 @@ export type Database = {
           type: string
         }
         Update: {
-          comment?: string
           age?: string
           brand?: string
           category?: string | null
+          comment?: string
           cpu?: string
           created_at?: string
           disk?: string | null
@@ -115,12 +115,11 @@ export type Database = {
       }
       eligibilities: {
         Row: {
-          documents_deleted_at: string | null
-          siret_details: Json | null
           created_at: string
           decided_at: string | null
           decision_message: string
           documents: Json
+          documents_deleted_at: string | null
           id: string
           justif_type: string
           org_name: string | null
@@ -131,17 +130,17 @@ export type Database = {
           profile: string
           project: string
           siret: string | null
+          siret_details: Json | null
           siret_verified: boolean
           status: string
           valid_until: string | null
         }
         Insert: {
-          documents_deleted_at?: string | null
-          siret_details?: Json | null
           created_at?: string
           decided_at?: string | null
           decision_message?: string
           documents?: Json
+          documents_deleted_at?: string | null
           id?: string
           justif_type: string
           org_name?: string | null
@@ -152,17 +151,17 @@ export type Database = {
           profile: string
           project?: string
           siret?: string | null
+          siret_details?: Json | null
           siret_verified?: boolean
           status?: string
           valid_until?: string | null
         }
         Update: {
-          documents_deleted_at?: string | null
-          siret_details?: Json | null
           created_at?: string
           decided_at?: string | null
           decision_message?: string
           documents?: Json
+          documents_deleted_at?: string | null
           id?: string
           justif_type?: string
           org_name?: string | null
@@ -173,6 +172,7 @@ export type Database = {
           profile?: string
           project?: string
           siret?: string | null
+          siret_details?: Json | null
           siret_verified?: boolean
           status?: string
           valid_until?: string | null
@@ -181,30 +181,30 @@ export type Database = {
       }
       feedback: {
         Row: {
-          rating: number
           approved: boolean
           author: string
           created_at: string
           id: string
           message: string
+          rating: number
           user_id: string
         }
         Insert: {
-          rating?: number
           approved?: boolean
           author: string
           created_at?: string
           id?: string
           message: string
+          rating?: number
           user_id?: string
         }
         Update: {
-          rating?: number
           approved?: boolean
           author?: string
           created_at?: string
           id?: string
           message?: string
+          rating?: number
           user_id?: string
         }
         Relationships: []
@@ -262,71 +262,71 @@ export type Database = {
       }
       requests: {
         Row: {
-          closed_at: string | null
-          delivered_at: string | null
-          shipped_at: string | null
           approved_at: string | null
-          refusal_reason: string | null
-          refusal_message: string
-          os_pref: string
           category: string | null
+          closed_at: string | null
           created_at: string
+          delivered_at: string | null
           details: string
           device_ids: string[]
           device_type: string
           id: string
           need: string
           notifications: boolean
+          os_pref: string
           owner: string
           owner_id: string
           profile: string
           quantity: number
+          refusal_message: string
+          refusal_reason: string | null
+          shipped_at: string | null
           status: string
           tracking: string
         }
         Insert: {
-          closed_at?: string | null
-          delivered_at?: string | null
-          shipped_at?: string | null
           approved_at?: string | null
-          refusal_reason?: string | null
-          refusal_message?: string
-          os_pref?: string
           category?: string | null
+          closed_at?: string | null
           created_at?: string
+          delivered_at?: string | null
           details?: string
           device_ids?: string[]
           device_type: string
           id?: string
           need?: string
           notifications?: boolean
+          os_pref?: string
           owner: string
           owner_id?: string
           profile: string
           quantity?: number
+          refusal_message?: string
+          refusal_reason?: string | null
+          shipped_at?: string | null
           status?: string
           tracking: string
         }
         Update: {
-          closed_at?: string | null
-          delivered_at?: string | null
-          shipped_at?: string | null
           approved_at?: string | null
-          refusal_reason?: string | null
-          refusal_message?: string
-          os_pref?: string
           category?: string | null
+          closed_at?: string | null
           created_at?: string
+          delivered_at?: string | null
           details?: string
           device_ids?: string[]
           device_type?: string
           id?: string
           need?: string
           notifications?: boolean
+          os_pref?: string
           owner?: string
           owner_id?: string
           profile?: string
           quantity?: number
+          refusal_message?: string
+          refusal_reason?: string | null
+          shipped_at?: string | null
           status?: string
           tracking?: string
         }
@@ -356,9 +356,6 @@ export type Database = {
     }
     Functions: {
       device_assigned_to_me: { Args: { _device_id: string }; Returns: boolean }
-      is_eligible: { Args: { _uid: string }; Returns: boolean }
-      is_member: { Args: { _uid: string }; Returns: boolean }
-      public_stats: { Args: never; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -366,6 +363,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_eligible: { Args: { _uid: string }; Returns: boolean }
+      is_member: { Args: { _uid: string }; Returns: boolean }
+      notify: {
+        Args: { _body: string; _title: string; _uid: string }
+        Returns: undefined
+      }
+      public_stats: { Args: never; Returns: Json }
     }
     Enums: {
       app_role: "donateur" | "beneficiaire" | "admin"

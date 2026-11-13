@@ -92,7 +92,10 @@ export const MAX_QUANTITY: Record<Profile, number> = { Particulier: 1, Organisat
  * Justificatifs acceptés et durée d'éligibilité proposée par défaut (en mois).
  * Le gestionnaire peut ajuster la durée au moment de la validation.
  */
-export const JUSTIFS: Record<string, { label: string; doc: string; months: number; profile: Profile; legacy?: boolean }> = {
+export type Justif = { label: string; doc: string; months: number; profile: Profile; legacy?: boolean };
+export type JustifKey = "bourse" | "france_travail" | "caf" | "c2s" | "impots" | "organisation";
+
+export const JUSTIFS: { [K in JustifKey]: Justif } = {
   bourse: { label: "Étudiant boursier", doc: "Notification de bourse (CROUS) de l'année en cours", months: 12, profile: "Particulier" },
   france_travail: { label: "Demandeur d'emploi", doc: "Attestation d'inscription à France Travail de moins de 3 mois", months: 6, profile: "Particulier" },
   caf: { label: "Bénéficiaire des minima sociaux (RSA, AAH, prime d'activité…)", doc: "Attestation CAF ou MSA de moins de 3 mois", months: 12, profile: "Particulier" },
@@ -101,6 +104,9 @@ export const JUSTIFS: Record<string, { label: string; doc: string; months: numbe
   impots: { label: "Revenus modestes (avis d'imposition)", doc: "Avis d'imposition", months: 12, profile: "Particulier", legacy: true },
   organisation: { label: "Organisation", doc: "Statuts, récépissé de déclaration ou attestation d'immatriculation", months: 24, profile: "Organisation" },
 };
+/** Recherche d'un justificatif à partir d'une valeur enregistrée en base (peut être un critère retiré). */
+export const justifFor = (key: string): Justif | undefined => (JUSTIFS as Record<string, Justif | undefined>)[key];
+
 export const PARTICULIER_JUSTIFS = Object.entries(JUSTIFS).filter(([, j]) => j.profile === "Particulier" && !j.legacy);
 export const VALIDITY_OPTIONS = [3, 6, 12, 18, 24, 36];
 

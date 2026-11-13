@@ -323,7 +323,7 @@ export async function decideEligibility(e: Eligibility, decision: { status: "val
 
 export async function openDocument(path: string) {
   const { data, error } = await supabase.storage.from("justificatifs").createSignedUrl(path, 300);
-  if (error || !data) return toast.error("Impossible d'ouvrir le justificatif.");
+  if (error || !data) { toast.error("Impossible d'ouvrir le justificatif."); return; }
   window.open(data.signedUrl, "_blank", "noopener");
 }
 

@@ -6,12 +6,12 @@ import { PROFILES, type Profile } from "@/lib/referentiel";
 import { isStrongPassword, isValidEmail, reload } from "@/lib/store";
 
 type Mode = "connexion" | "inscription" | "oubli";
-type Search = { mode?: "inscription" | "oubli"; verifie?: number };
+type Search = { mode?: "inscription" | "oubli" | undefined; verifie?: number | undefined };
 
 export const Route = createFileRoute("/connexion")({
   validateSearch: (s: Record<string, unknown>): Search => ({
-    mode: s.mode === "inscription" || s.mode === "oubli" ? s.mode : undefined,
-    verifie: s.verifie ? 1 : undefined,
+    mode: s["mode"] === "inscription" || s["mode"] === "oubli" ? s["mode"] : undefined,
+    verifie: s["verifie"] ? 1 : undefined,
   }),
   head: () => ({ meta: [{ title: "Se connecter — Reboot Solidaire" }, { name: "description", content: "Connectez-vous ou créez votre compte pour donner ou demander du matériel informatique reconditionné." }, { property: "og:title", content: "Se connecter" }, { property: "og:description", content: "Accédez à votre espace Reboot Solidaire." }] }),
   component: Login,

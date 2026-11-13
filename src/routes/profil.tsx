@@ -3,7 +3,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Badge, ErrorMsg, FieldLabel, Page, PasswordField, RequireLogin, StarInput, Stars } from "@/components/Layout";
 import { supabase } from "@/integrations/supabase/client";
-import { JUSTIFS } from "@/lib/referentiel";
+import { justifFor } from "@/lib/referentiel";
 import {
   activeEligibility, eligibilityLabel, eligibilityTone, fmtDate, isActiveRequest, isStrongPassword, isValidEmail,
   markNotificationRead, myEligibilities, roleLabel, submitFeedback, useDB,
@@ -58,7 +58,7 @@ function ProfilContent() {
             <h2 className="text-xl font-bold text-primary">Mon éligibilité</h2>
             {elig ? (
               <div className="mt-3 space-y-2 text-sm">
-                <p><Badge tone={eligibilityTone(elig)}>{eligibilityLabel(elig)}</Badge> <span className="ml-2">{JUSTIFS[elig.justifType]?.label ?? elig.justifType}</span></p>
+                <p><Badge tone={eligibilityTone(elig)}>{eligibilityLabel(elig)}</Badge> <span className="ml-2">{justifFor(elig.justifType)?.label ?? elig.justifType}</span></p>
                 {active?.validUntil && <p>Valable jusqu'au <b>{fmtDate(active.validUntil)}</b>. Vous pouvez faire des demandes de matériel.</p>}
                 {elig.status === "en_attente" && <p>Votre dossier est en cours d'examen par un gestionnaire.</p>}
                 {elig.status === "refusee" && <p className="text-destructive">Motif : {elig.decisionMessage}</p>}

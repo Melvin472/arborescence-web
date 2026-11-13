@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Badge, ErrorMsg, FieldLabel, Page, RequiredLegend, RequireLogin } from "@/components/Layout";
-import { JUSTIFS, ORG_TYPES, PARTICULIER_JUSTIFS } from "@/lib/referentiel";
+import { JUSTIFS, ORG_TYPES, PARTICULIER_JUSTIFS, justifFor } from "@/lib/referentiel";
 import {
   activeEligibility, eligibilityLabel, eligibilityTone, fmtDate, isValidSiret, lookupSiret, myEligibilities, pendingEligibility,
   submitEligibility, useDB, type SiretDetails,
@@ -111,7 +111,7 @@ function FileField({ label, required, file, onFile, hint }: { label: string; req
   const [err, setErr] = useState<string | null>(null);
   return (
     <label className="block">
-      <FieldLabel required={required}>{label}</FieldLabel>
+      <FieldLabel required={required ?? false}>{label}</FieldLabel>
       {hint && <span className="block text-xs text-muted-foreground">{hint}</span>}
       <input required={required} type="file" accept={ACCEPT} className="field mt-1" onChange={(e) => {
         const f = e.target.files?.[0] ?? null;
@@ -142,7 +142,7 @@ function ParticulierForm({ onSent }: { onSent: (months: number) => void }) {
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const j = JUSTIFS[justif];
+  const j = justifFor(justif);
   return (
     <form className="card-soft p-8 max-w-2xl grid gap-5" onSubmit={async (e) => {
       e.preventDefault();

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Badge } from "@/components/Layout";
-import { JUSTIFS, VALIDITY_OPTIONS } from "@/lib/referentiel";
+import { VALIDITY_OPTIONS, justifFor } from "@/lib/referentiel";
 import { decideEligibility, eligibilityLabel, eligibilityTone, fmtDate, openDocument, useDB, type Eligibility } from "@/lib/store";
 
 export function EligibilitiesPanel() {
@@ -29,7 +29,7 @@ const untilFrom = (m: number) => { const d = new Date(); d.setMonth(d.getMonth()
 
 function EligibilityCard({ e }: { e: Eligibility }) {
   const { db } = useDB();
-  const j = JUSTIFS[e.justifType];
+  const j = justifFor(e.justifType);
   const [validity, setValidity] = useState(j?.months ?? 12);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
